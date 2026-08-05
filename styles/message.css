@@ -1,0 +1,47 @@
+/* ── HELPERS ── */
+/* 여러 페이지에서 공통으로 쓰는 상태 메시지 / 구분선 — 특정 화면 전용이 아님 */
+
+/* 에러 안내 문구 (폼 검증 실패, API 에러 등) */
+.errorMsg {
+  font-size: 13px;
+  color: var(--error);
+  background: var(--error-bg);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 8px 0;
+}
+
+/* 성공 안내 문구 (저장 완료, 예매 완료 등) */
+.successMsg {
+  font-size: 13px;
+  color: var(--success);
+  background: var(--success-bg);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 8px 0;
+}
+
+/* 데이터 불러오는 중 표시 ("로딩 중...") */
+.loadingMsg {
+  font-size: 13px;
+  color: var(--text-2);
+  padding: 40px 24px;
+  text-align: center;
+}
+
+/* 목록이 비어있을 때 표시 ("예매 내역이 없습니다" 등) */
+.emptyMsg {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--text-3);
+  font-size: 14px;
+}
+
+/* 섹션 구분용 가로선 */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 24px 0;
+}

@@ -1,0 +1,107 @@
+/* ── MYPAGE ── */
+/* 마이페이지 전용 — app/mypage/page.tsx (내 정보 + 예매 내역) */
+
+/* 왼쪽 프로필 카드(280px 고정) + 오른쪽 예매 목록으로 나누는 2단 그리드 */
+.mypageGrid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+/* 왼쪽 프로필 카드 — 스크롤해도 화면에 붙어있도록 sticky */
+.profileCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 24px;
+  position: sticky;
+  top: 80px;
+}
+
+/* 프로필 원형 아이콘 (이니셜/아이콘이 들어가는 원) */
+.profileAvatar {
+  width: 64px;
+  height: 64px;
+  background: var(--accent-dim);
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
+.profileName {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.profileId {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+/* 오른쪽 예매 내역 카드들을 세로로 쌓는 목록 */
+.reservationList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 예매 내역 카드 하나 */
+.reservationCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  transition: border-color 0.15s;
+}
+
+.reservationCard:hover { border-color: var(--border-strong); }
+
+.reservationInfo { flex: 1; min-width: 0; }
+
+.reservationTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+  white-space: nowrap; /* 제목 길면 ... 처리 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 예매 카드 하단의 부가 정보(날짜, 좌석 등급, 상태 뱃지 등)를 나열 */
+.reservationMeta {
+  font-size: 12px;
+  color: var(--text-2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 환불완료된 결제 내역 카드의 작은 삭제(x) 버튼 — .adminModalClose와 동일한 스타일 */
+.cardCloseBtn {
+  background: none;
+  border: none;
+  color: var(--text-2);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-family: inherit;
+}
+
+.cardCloseBtn:hover { background: var(--surface2); color: var(--text); }

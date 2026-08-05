@@ -1,0 +1,225 @@
+/* ── CARD ── */
+/* 범용 카드 틀 (아직 어디서도 안 쓰이면 향후 재사용 목적으로 남아있는 기본형) */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+
+/* ── EVENT GRID ── */
+/* 공연 목록 화면 전용 — app/page.tsx (메인 공연 목록) */
+
+/* 공연 카드들을 그리드로 배치 (화면 폭에 따라 자동으로 열 개수 조절) */
+.eventGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+/* 공연 카드 하나 (포스터 + 제목 + 회차 목록) */
+.eventCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+
+.eventCard:hover {
+  border-color: var(--accent);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.15);
+}
+
+/* 포스터 + 제목만 감싸는 상세 페이지 링크.
+   회차 영역(예매 버튼)은 링크 밖이라 커서/클릭이 겹치지 않음 */
+.eventCardLink {
+  display: block;
+  cursor: pointer;
+}
+
+.eventCardLink:hover .eventTitle { color: var(--accent); }
+
+/* 키보드 탐색 시 카드 안쪽에 초점 표시 (기본 outline은 카드 모서리에 잘림) */
+.eventCardLink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 12px;
+}
+
+/* 포스터 이미지가 없을 때 공연명 첫 글자 등을 크게 보여주는 대체 영역 */
+.eventPoster {
+  width: 100%;
+  aspect-ratio: 3/4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* 카드 아래쪽 정보 영역 (제목 + 장소 + 회차 요약) */
+.eventInfoHead {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.eventTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+  white-space: nowrap; /* 제목 길면 ... 처리 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.15s;
+}
+
+.eventLocation {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-bottom: 12px;
+}
+
+/* 회차 요약 한 줄 — "2026.08.06 ~ 09.04 · 총 12회차" + 상태 뱃지.
+   회차를 전부 나열하던 방식은 카드 높이가 공연마다 달라져서 요약으로 바꿨다
+   (회차 선택/예매는 상세 화면의 달력에서 함) */
+.eventSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-2-5);
+}
+
+.eventSchedule {
+  font-size: 12px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums; /* 숫자 폭 고정 — 카드마다 날짜 자리가 맞도록 */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── SEARCH BAR ── */
+/* 공연 검색창 — app/page.tsx (메인 공연 목록, 제목/공연장 검색) */
+.searchBar {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.searchInput {
+  flex: 1;
+  height: 40px;
+  padding: 0 var(--space-3);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--font-md);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ── CATEGORY FILTER ── */
+/* 카테고리 필터 칩 — app/page.tsx (메인 공연 목록, 카테고리 선택) */
+.categoryFilterBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.categoryChip {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 var(--space-3);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: var(--font-md);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.categoryChip:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.categoryChipActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.categoryChipActive:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* ── PAGINATION ── */
+/* 공연 목록 화면 번호 페이지네이션 — app/page.tsx (메인 공연 목록) */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.paginationItem,
+.paginationArrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--space-2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent; /* <button>으로 써도(관리자 페이지) 브라우저 기본 배경이 안 비치게 */
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: var(--font-md);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.paginationItem:hover,
+.paginationArrow:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.paginationItemActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.paginationItemActive:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.paginationDisabled {
+  opacity: 0.4;
+  pointer-events: none;
+}

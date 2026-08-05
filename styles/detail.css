@@ -1,0 +1,362 @@
+/* ── PERFORMANCE DETAIL ── */
+/* 공연 상세 화면 (PER02_DETAIL01) */
+/* 담당: app/events/[performanceId]/page.tsx */
+
+/* 상단 포스터 + 기본정보 2단 배치 */
+.detailTop {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+/* 포스터 — 목록 카드와 같은 3:4 비율 유지 */
+.detailPoster {
+  width: 200px;
+  aspect-ratio: 3 / 4;
+  flex-shrink: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+}
+
+.detailPoster img { width: 100%; height: 100%; object-fit: cover; }
+.detailPosterEmpty { width: 100%; height: 100%; background: var(--surface2); }
+
+/* 포스터 오른쪽 정보 영역 — 공연 제목은 페이지 헤더(pageTitle)에만 두므로 여기엔 없다 */
+.detailInfo { flex: 1; min-width: 0; }
+
+/* 공연장/회차/출연 같은 "항목 - 값" 나열 */
+.detailMeta { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.detailMetaRow { display: flex; gap: var(--space-3); font-size: var(--font-md); }
+.detailMetaRow dt { width: 60px; flex-shrink: 0; color: var(--text-2); }
+.detailMetaRow dd { color: var(--text); }
+
+/* 회차 / 출연진 등 섹션 단위 */
+.detailSection { margin-bottom: 32px; }
+
+.detailSectionTitle {
+  font-size: var(--font-xl);
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.detailEmpty {
+  font-size: var(--font-md);
+  color: var(--text-3);
+  padding: var(--space-4) 0;
+}
+
+/* 회차 한 줄 = 공연일시 + 예매버튼 */
+.roundList { display: flex; flex-direction: column; }
+
+.roundRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.roundRow:last-child { border-bottom: none; }
+
+.roundTime { font-size: var(--font-md); color: var(--text); }
+
+/* 캐스팅 목록 — 화면 폭에 맞춰 자동 줄바꿈 */
+.castGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-3);
+  list-style: none;
+}
+
+.castItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* 배역명 — 배우 이름보다 작고 흐리게 (콘서트처럼 배역이 없으면 아예 안 그려짐) */
+.castRole {
+  font-size: var(--font-sm);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.castName { font-size: var(--font-lg); color: var(--text); font-weight: 600; }
+
+/* 회차별 캐스팅 — 회차 하나당 블록 하나 */
+.roundCastWrap { margin-top: 24px; }
+
+.roundCastHeading {
+  font-size: var(--font-md);
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: var(--space-3);
+}
+
+.roundCastBlock { margin-bottom: var(--space-4); }
+
+.roundCastTitle {
+  font-size: var(--font-md);
+  color: var(--text-2);
+  margin-bottom: var(--space-2);
+}
+
+/* ── 회차 달력 (PER02_DETAIL02) ── */
+
+.calendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.calendarMonth {
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--text);
+  min-width: 100px;
+  text-align: center;
+}
+
+.calendarNav {
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--font-lg);
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.calendarNav:hover:not(:disabled) { background: var(--surface2); border-color: var(--border-strong); }
+
+/* 회차가 있는 달의 범위를 벗어나면 비활성 — 빈 달을 계속 넘기지 않게 함 */
+.calendarNav:disabled { color: var(--text-3); cursor: default; }
+
+/* 요일 머리글 + 날짜 격자는 같은 7열을 공유 */
+.calendarDow,
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-1);
+}
+
+.calendarDow { margin-bottom: var(--space-1); }
+
+.calendarDowCell {
+  text-align: center;
+  font-size: var(--font-sm);
+  color: var(--text-2);
+  padding: var(--space-1) 0;
+}
+
+/* 첫 번째 칸(일요일)만 빨강 */
+.calendarDowCell:first-child { color: var(--error); }
+
+.calendarCell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: var(--font-md);
+  background: none;
+}
+
+.calendarCellEmpty { visibility: hidden; }
+
+/* 회차가 없는 날 — 클릭 대상이 아님 */
+.calendarCellMuted { color: var(--text-3); }
+
+/* 회차가 있는 날 — 누르면 그 날짜로 필터 */
+.calendarCellHas {
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.calendarCellHas:hover { background: var(--surface2); }
+
+.calendarCellSelected {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 회차 있는 날 아래 점 표시 */
+.calendarDot {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* 회차 영역 2단 구성 — 왼쪽 달력 / 오른쪽 회차 목록.
+   minmax(0, 1fr)로 두는 이유: 기본값 auto 는 내용이 길면 열이 컨테이너 밖으로 밀린다 */
+/* align-items 를 기본값(stretch)으로 두는 게 중요하다 — start 로 두면 두 칸이 각자 내용 높이만큼만
+   차지해서, 회차가 1건일 때와 6건일 때 오른쪽 칸 높이가 널뛴다.
+   stretch 면 두 칸이 같은 높이가 되어 날짜를 골라도 영역 크기가 그대로 유지된다 */
+.calendarLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+}
+
+.calendarPane { min-width: 0; }
+
+/* 목록 쪽은 세로 구분선으로 달력과 나눔 (좁은 화면에서는 가로선으로 바뀜 — responsive.css) */
+.calendarListPane {
+  min-width: 0;
+  padding-left: 24px;
+  border-left: 1px solid var(--border);
+}
+
+.calendarListHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  min-height: 28px; /* "전체 보기" 버튼이 나타났다 사라져도 목록이 위아래로 안 흔들리게 */
+}
+
+/* 헤더 오른쪽 — "전체 보기" + 페이지 화살표 */
+.calendarListActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.listPager {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.listPagerBtn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: var(--font-md);
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.listPagerBtn:hover:not(:disabled) {
+  background: var(--surface2);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.listPagerBtn:disabled { color: var(--text-3); cursor: default; }
+
+.listPagerLabel {
+  font-size: var(--font-sm);
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums; /* 1/2 → 2/2 로 바뀔 때 폭이 흔들리지 않게 */
+  min-width: 28px;
+  text-align: center;
+}
+
+.calendarListLabel {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.calendarClear {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--space-1) var(--space-2-5);
+  font-family: inherit;
+  font-size: var(--font-base);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.calendarClear:hover { background: var(--surface2); color: var(--text); }
+
+/* ── 출연진 / 감상평 탭 ── */
+/* 섹션 제목(detailSectionTitle) 자리를 탭 버튼 줄로 대체 */
+.detailTabs {
+  display: flex;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-4);
+}
+
+.detailTab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0 var(--space-1) var(--space-2);
+  margin-bottom: -1px; /* 컨테이너의 1px 밑줄 위에 탭 밑줄이 겹치도록 */
+  font-family: inherit;
+  font-size: var(--font-xl);
+  font-weight: 700;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.detailTab:hover { color: var(--text); }
+
+/* 선택된 탭 — 보라색 밑줄로 표시 */
+.detailTabActive {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+/* 감상평 미구현 안내 — 기능이 붙으면 이 블록은 통째로 지우면 됨 */
+.reviewPlaceholder {
+  border: 1px dashed var(--border-strong);
+  border-radius: 12px;
+  padding: 40px 24px;
+  text-align: center;
+  background: var(--surface);
+}
+
+.reviewPlaceholderTitle {
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--text-2);
+  margin-bottom: var(--space-2);
+}
+
+.reviewPlaceholderDesc {
+  font-size: var(--font-md);
+  color: var(--text-3);
+  line-height: 1.8;
+}

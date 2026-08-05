@@ -1,0 +1,163 @@
+/* ── NAV ── */
+/* 상단 네이게이션 바 */
+/* 전체 페이지에 쓰임 */
+/* 담당: components/SiteNav.tsx */
+
+.siteNav {
+  background: #0d0d0d;
+  border-bottom: 1px solid var(--border);
+  position: sticky; /* 스크롤해도 상단에 고정 */
+  top: 0;
+  z-index: 100;
+}
+
+/* 네브바 내부 좌우 정렬(왼쪽 로고 / 오른쪽 메뉴)을 위한 컨테이너 */
+.siteNavInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 58px;
+}
+
+/* "Q-Ket" 로고 텍스트 */
+.siteNavBrand {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -0.03em;
+  text-decoration: none;
+  transition: opacity 0.12s;
+}
+
+.siteNavBrand:hover { opacity: 0.8; }
+
+.siteNavLinks {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* 상단 메뉴 링크 (공연, 마이페이지 등) */
+.siteNavLink {
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: color 0.12s, background 0.12s;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+  line-height: 1.6;
+}
+
+.siteNavLink:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 현재 보고 있는 페이지에 해당하는 메뉴 강조 표시 */
+.siteNavLinkActive {
+  color: var(--text) !important;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* 로그인 상태일 때 오른쪽에 보이는 사용자 이름 */
+.siteNavUser {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  padding: 6px 12px;
+}
+
+/* 로그인 버튼 (비로그인 상태) */
+.siteNavLogin {
+  color: var(--text-2);
+}
+
+.siteNavLogin:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 로그아웃 버튼 — hover 시 빨간색으로 경고성 강조 */
+.siteNavLogout {
+  color: var(--text-2);
+}
+
+.siteNavLogout:hover {
+  color: var(--error);
+  background: var(--error-bg);
+}
+
+/* ── NAV 드롭다운 메뉴 (예: 상단 "관리자" 그룹 메뉴) ── */
+/* dev 브랜치에서 관리자 메뉴 기능과 함께 추가된 스타일 — merge 시 이 파일로 가져옴 */
+.siteNavItem {
+  position: relative;
+}
+
+/* 드롭다운 있는 메뉴 옆에 붙는 작은 화살표 */
+.siteNavCaret {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 5px;
+  vertical-align: middle;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid currentColor;
+  opacity: 0.55;
+}
+
+.siteNavDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 6px;
+  min-width: 160px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  z-index: 110;
+}
+
+/* 메뉴에 마우스 올리거나 포커스하면 드롭다운 노출 */
+.siteNavItem:hover .siteNavDropdown,
+.siteNavItem:focus-within .siteNavDropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.siteNavDropdownLink {
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  transition: color 0.12s, background 0.12s;
+}
+
+.siteNavDropdownLink:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.siteNavDropdownLinkActive {
+  color: var(--text) !important;
+  background: rgba(255, 255, 255, 0.08);
+}

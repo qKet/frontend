@@ -1,0 +1,24 @@
+/* ── STATUS BADGE ── */
+/* 상태를 색깔로 표시하는 작은 라벨 — 공연 예매 상태 / 좌석 등급에 공용으로 재사용 */
+/* 담당: app/page.tsx(공연 상태), app/seats(좌석 등급 범례), app/mypage(예매 상태) */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* 공연 예매 상태별 색상 */
+.badgeOpen    { background: var(--success-bg); color: var(--success); }   /* 예매 가능 — 초록 */
+.badgeClosed  { background: var(--border);     color: var(--text-2);  }  /* 예매 종료/마감 — 회색 */
+.badgeSoldout { background: var(--error-bg);   color: var(--error);   }  /* 매진 — 빨강 */
+
+/* 좌석 등급별 색상 (VIP/R/S) — badge* 색상 팔레트는 base.css의 --vip-*, --r-*, --s-* 변수 사용 */
+.badgeVip     { background: var(--vip-bg);     color: var(--vip-color); }
+.badgeR       { background: var(--r-bg);       color: var(--r-color); }
+.badgeS       { background: var(--s-bg);       color: var(--s-color); }

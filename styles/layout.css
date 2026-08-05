@@ -1,0 +1,43 @@
+/* ── PAGE LAYOUT ── */
+/* 페이지 전체를 감싸는 최대 폭 + 여백 틀 (거의 모든 페이지의 최상위 컨테이너) */
+/* 담당: app 폴더 안 대부분의 page.tsx 최상위 div */
+
+/* 기본 폭 (공연 목록, 마이페이지 등 일반 페이지) */
+.pageWrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 36px 24px 80px;
+}
+
+/* 좌석 선택 페이지 전용 — 좌석이 많은 대형 공연장(예: 2000석 고척스카이돔)도
+   좌석이 좁아지지 않게 다른 페이지보다 폭을 넓게 씀 */
+.pageWrapWide {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 36px 24px 80px;
+}
+
+/* 좁은 폭 — 로그인/회원가입처럼 콘텐츠가 적은 페이지용 */
+.pageWrapNarrow {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 36px 24px 80px;
+}
+
+/* 페이지 상단 제목+설명 영역을 감싸는 여백 */
+.pageHeader {
+  margin-bottom: 28px;
+}
+
+.pageTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.03em;
+  margin-bottom: 6px;
+}
+
+.pageSubtitle {
+  font-size: 13px;
+  color: var(--text-2);
+}

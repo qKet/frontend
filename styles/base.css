@@ -1,0 +1,71 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+ * 3차 프로젝트 -  CSS 표준화
+ * 기존 화면과 디자인은 동일, 값을 변수화
+ * 기존에 있던 코드 내용 주석은 나중에 하면서 추가하겠습니다 ㅜㅜ
+*/
+
+:root {
+  --bg: #0a0a0a;
+  --surface: #141414;
+  --surface2: #1e1e1e;
+  --border: #262626;
+  --border-strong: #383838;
+  --text: #f2f2f2;
+  --text-2: #737373;
+  --text-3: #404040;
+  --accent: #8b5cf6;
+  --accent-hover: #7c3aed;
+  --accent-dim: rgba(139, 92, 246, 0.15);
+  --success: #22c55e;
+  --success-bg: rgba(34, 197, 94, 0.12);
+  --error: #f87171;
+  --error-bg: rgba(248, 113, 113, 0.12);
+  --warning: #fbbf24;
+  --warning-bg: rgba(251, 191, 36, 0.12);
+  --vip-color: #a78bfa;
+  --vip-bg: rgba(167, 139, 250, 0.18);
+  --r-color: #60a5fa;
+  --r-bg: rgba(96, 165, 250, 0.18);
+  --s-color: #4ade80;
+  --s-bg: rgba(74, 222, 128, 0.18);
+
+  /* fontWeight는 아직 한곳에밖에 안 쓰여서 변수생성 안했지만 추가될 경우 변수도 추가할 예정 */
+  /* Font-size 종류 : 10~15 / 32 */
+  --font-xs: 10px;    /* 아주 작은 보조 텍스트 (예: 오픈 시각 안내) */
+  --font-sm: 11px;    /* 배지, 잠금 안내 등 */
+  --font-base: 12px;  /* 버튼 텍스트 등 */
+  --font-md: 13px;    /* 본문 기본 텍스트 */
+  --font-lg: 14px;    /* 로딩 안내 등 약간 큰 텍스트 */
+  --font-xl: 15px;    /* 섹션 소제목 */
+  --font-2xl: 32px;   /* 아이콘성 큰 텍스트 (예: 🎫) */
+
+  /* Spacing — 4px 배수 기준. 3, 10px만 예외로 별도 유지 */
+  --space-0-5: 3px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-2-5: 10px;  /* 기존 padding "4px 10px"과의 호환용 예외 값 (2-5가 2.5입니다! 2랑3 중간 크기라는 뜻) */
+  --space-3: 12px;
+  --space-4: 16px;
+
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+

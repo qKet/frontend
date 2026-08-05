@@ -1,0 +1,32 @@
+/* ── RESPONSIVE ── */
+/* 화면 폭이 좁아질 때(태블릿/모바일) 적용되는 예외 규칙 모음 — 항상 맨 마지막에 import 되어야 함 */
+
+/* 태블릿 이하(768px) — 좌석 화면을 세로 배치로, 마이페이지도 1단으로 전환 */
+@media (max-width: 768px) {
+  .seatLayout { flex-direction: column; }       /* 좌석 지도 + 패널을 세로로 쌓음 */
+  .seatPanel  { width: 100%; position: static; } /* sticky 해제하고 폭 100%로 */
+  .mypageGrid { grid-template-columns: 1fr; }    /* 프로필 카드 + 예매 목록을 1열로 */
+  .profileCard { position: static; }             /* sticky 해제 */
+  .eventGrid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; } /* 카드 최소폭 축소 */
+  .detailTop { flex-direction: column; }         /* 공연 상세: 포스터 + 정보를 세로로 쌓음 */
+  .detailPoster { width: 160px; }                /* 세로 배치라 포스터도 조금 줄임 */
+  .calendarLayout { grid-template-columns: 1fr; gap: var(--space-4); } /* 달력 + 회차목록을 세로로 */
+  .checkoutPanel { grid-template-columns: 1fr; }  /* 결제: 요약(위) + 결제(아래) 1단으로 */
+  .checkoutWrap  { justify-content: flex-start; } /* 1단이라 세로가 길어져 중앙정렬 해제 */
+  .checkoutTotal { margin-top: var(--space-4); }  /* 1단에서는 아래로 밀 필요 없음 */
+  .calendarListPane {                            /* 세로 배치라 구분선을 세로선 → 가로선으로 */
+    padding-left: 0;
+    border-left: none;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+  }
+}
+
+/* 모바일(480px 이하) — 여백/폰트 크기를 더 줄임 */
+@media (max-width: 480px) {
+  .pageWrap, .pageWrapNarrow { padding: 20px 16px 60px; }
+  .authBox { padding: 28px 20px 24px; }
+  .queueBox { padding: 36px 24px; }
+  .queuePosition { font-size: 56px; }
+  .siteNavInner { padding: 0 16px; }
+}

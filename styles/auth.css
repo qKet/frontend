@@ -1,0 +1,159 @@
+/* ── AUTH ── */
+/* 로그인 / 회원가입 화면 전용 */
+/* 담당: app/(auth)/login/page.tsx, app/(auth)/signup/page.tsx */
+
+/* 화면 전체를 세로/가로 가운데 정렬 (로그인 박스가 화면 중앙에 오도록) */
+.authWrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bg);
+}
+
+/* 로그인/회원가입 폼을 감싸는 카드 박스 */
+.authBox {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 40px 36px 36px;
+}
+
+/* 박스 상단 "Q-Ket" 로고 */
+.authLogo {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -0.03em;
+  margin-bottom: 28px;
+}
+
+.authTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.03em;
+  margin-bottom: 6px;
+}
+
+.authDesc {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-bottom: 28px;
+}
+
+/* 하단 "계정이 없으신가요? 회원가입" 같은 안내 문구 */
+.authHelper {
+  font-size: 13px;
+  color: var(--text-2);
+  text-align: center;
+  margin-top: 20px;
+}
+
+.authHelper a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── AUTH DIVIDER / SOCIAL LOGIN ── */
+/* 로그인 폼과 소셜 로그인 버튼 사이의 "또는" 구분선 */
+.authDivider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.authDivider::before,
+.authDivider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* 구글/카카오/네이버 간편 로그인 공통 버튼 (app/(auth)/login/page.tsx) */
+.btnSocial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 11px 20px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.btnSocial:hover { opacity: 0.85; }
+.btnSocial:last-of-type { margin-bottom: 0; }
+
+/* 브랜드 컬러는 라이트/다크 테마와 무관하게 고정 (각 서비스 로그인 버튼 관례) */
+.btnGoogle {
+  background: #ffffff;
+  color: #1f1f1f;
+  border: 1px solid #dadce0;
+}
+
+.btnKakao {
+  background: #fee500;
+  color: #1f1f1f;
+  border: none;
+}
+
+.btnNaver {
+  background: #03c75a;
+  color: #ffffff;
+  border: none;
+}
+
+/* ── FORM ── */
+/* 로그인/회원가입 입력 필드 공통 — 다른 폼(관리자 폼은 admin.css의 .adminInput 사용)과 별도 */
+
+/* 라벨 + 입력창 한 세트를 감싸는 단위 */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fieldInput {
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  background: var(--surface2);
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+/* 입력창 클릭 시 보라색 테두리 + 은은한 그림자로 포커스 표시 */
+.fieldInput:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.fieldInput::placeholder {
+  color: var(--text-3);
+}

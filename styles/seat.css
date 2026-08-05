@@ -1,0 +1,224 @@
+/* ── SEAT MAP ── */
+/* 좌석 선택 화면 전용 — app/seats/[scheduleId]/page.tsx */
+/* 좌석 등급(VIP/R/S) 색상은 badge.css와 같은 --vip-*, --r-*, --s-* 변수를 공유해서 통일감을 줌 */
+
+/* 좌석 지도(왼쪽) + 선택 정보 패널(오른쪽)을 나란히 배치하는 바깥 틀 */
+.seatLayout {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+}
+
+.seatMapWrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.seatVenue {
+  /* 양옆 블록 회전(transform)은 레이아웃 크기 계산에 반영되지 않으므로
+     기울어진 블록 모서리가 카드 밖으로 안 나가도록 패딩을 넉넉하게 줌 */
+  padding: 20px 28px 32px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface2);
+}
+
+/* 좌석 등급 구역(VIP 구역, R 구역, S 구역) 하나 */
+.seatSection {
+  margin-bottom: 30px;
+}
+
+.seatSection:last-child {
+  margin-bottom: 0;
+}
+
+.seatSectionHeader {
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--border);
+}
+
+/* 무대 표시 바 ("STAGE" 문구가 들어가는 좌석 지도 상단 바) */
+.seatStage {
+  width: 60%;
+  margin: 0 auto 24px;
+  padding: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  letter-spacing: 0.1em;
+}
+
+/* 상단 범례 (● VIP  ● R  ● S  ● 예약불가 등 색상 안내) */
+.seatLegend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.seatLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.seatLegendDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+/* 한 구역 안의 좌석 행들을 세로로 쌓는 컨테이너 */
+.seatGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── 블록 분할 배치 ──
+   각 등급 구역을 [행라벨 | 좌측블록 | 중앙블록 | 우측블록] 으로 구성.
+   양옆 블록은 무대 쪽으로 살짝 회전시켜 실제 공연장처럼 무대를 감싸는 부채꼴 느낌을 냄.
+   좌석을 개별로 이동시키지 않고 블록 전체를 기울이므로 블록 안 좌석은 항상 반듯하게 정렬됨. */
+.seatBlocks {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px; /* 블록 사이 통로 */
+}
+
+/* 행 번호(1, 2, 3...)를 세로로 나열하는 맨 왼쪽 열 */
+.seatLabelCol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 18px;
+  flex-shrink: 0;
+}
+
+/* 좌석 블록 하나 (좌측/중앙/우측 중 하나) */
+.seatBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-basis: 0;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+/* 양옆 블록 기울임 — 중앙 통로 쪽을 축으로 바깥쪽 끝이 무대에서 멀어지듯 내려감 */
+.seatBlockLeft {
+  transform: rotate(-2.5deg);
+  transform-origin: center right;
+}
+
+.seatBlockRight {
+  transform: rotate(2.5deg);
+  transform-origin: center left;
+}
+
+/* 블록 안 좌석 한 줄(행) — 좌석 버튼들을 가로로 나열 */
+.seatBlockRow {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 3px;
+  height: 20px;
+}
+
+/* seatLabelCol 안의 행 번호 하나 */
+.seatRowLabel {
+  height: 20px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 좌석 하나(버튼). 색상은 아래 상태별 클래스가 결정 */
+.seat {
+  width: 100%;
+  height: 100%;
+  min-height: 6px;
+  border-radius: 2px;
+  border: none;
+  cursor: pointer;
+  font-size: 0;
+  font-family: inherit;
+  font-weight: 600;
+  transition: transform 0.1s, opacity 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 좌석 상태별 색상 — 예매 가능(등급별) / 이미 예약됨 / 다른 사람이 선점(locked) 중 */
+.seatAvailableVip  { background: var(--vip-bg);  color: var(--vip-color); }
+.seatAvailableR    { background: var(--r-bg);    color: var(--r-color);   }
+.seatAvailableS    { background: var(--s-bg);    color: var(--s-color);   }
+.seatReserved      { background: var(--border);  color: var(--text-3);    cursor: not-allowed; }
+.seatLocked        { background: var(--warning-bg); color: var(--warning); cursor: not-allowed; } /* 선점(HOLD) 상태 */
+
+.seat:hover:not(:disabled) { transform: scale(1.4); opacity: 0.9; }
+
+/* 내가 클릭해서 선택한 좌석 (흰색 테두리로 강조) */
+.seatSelected {
+  outline: 2px solid #ffffff;
+  outline-offset: 1px;
+  transform: scale(1.4);
+}
+
+/* ── SEAT DETAIL PANEL ── */
+/* 화면 오른쪽 — 선택한 좌석 정보 / 결제 요약을 보여주는 고정(sticky) 패널 */
+.seatPanel {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  position: sticky;
+  top: 80px;
+}
+
+.seatPanelTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 16px;
+}
+
+.seatPanelEmpty {
+  font-size: 13px;
+  color: var(--text-3);
+  text-align: center;
+  padding: 24px 0;
+}
+
+.seatPanelRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.seatPanelLabel { color: var(--text-2); }
+.seatPanelValue { font-weight: 600; color: var(--text); }
+
+.seatPanelDivider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+

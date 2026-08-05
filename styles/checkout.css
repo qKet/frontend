@@ -1,0 +1,248 @@
+/* ── CHECKOUT (결제 수단 선택) ── */
+/* 담당: app/payments/checkout/page.tsx
+ *
+ * 이 화면만 다른 페이지와 레이아웃 규칙이 다른 이유:
+ * 토스페이먼츠 결제위젯(#payment-method, #agreement)은 토스가 자기 UI를 그대로 렌더링하는
+ * 영역이라 흰 배경/밝은 글자색을 우리가 바꿀 수 없다 (색상 변경은 토스 결제위젯 어드민에서만
+ * 가능한데, 그건 결제위젯 이용 가능한 MID가 있어야 함 — 지금 테스트 상점 MID로는 접근 불가).
+ * 그래서 흰색을 없애려 하지 말고 "왼쪽=우리 브랜드(다크) / 오른쪽=결제(라이트)"로 면을 갈라서
+ * 흰색이 의도된 결제 영역으로 읽히게 만듦. (Stripe Checkout 과 같은 구조)
+ */
+
+/* 결제 화면 전체 틀 — 상단 네비를 숨기는 대신 화면 중앙 정렬 */
+.checkoutWrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  gap: 20px;
+}
+
+/* 네비를 숨긴 대신 최소한의 브랜드/이탈 경로를 남기는 상단 줄 */
+.checkoutTopBar {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.checkoutBrand {
+  font-size: var(--font-xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.checkoutBack {
+  font-size: var(--font-md);
+  color: var(--text-2);
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.checkoutBack:hover { color: var(--text); }
+
+/* 2단 분할 패널 (왼쪽 요약 / 오른쪽 결제) */
+.checkoutPanel {
+  width: 100%;
+  max-width: 900px;
+  display: grid;
+  grid-template-columns: 0.85fr 1fr;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+}
+
+/* ── 왼쪽: 예매 요약 (다크) ── */
+.checkoutSummary {
+  background: linear-gradient(160deg, #1c1830 0%, #0e0d16 100%);
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+}
+
+.checkoutSummaryTitle {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  margin-bottom: 22px;
+}
+
+/* 포스터 + 공연명/장소 — QueueModal에서부터 실려온 값이 있을 때만 렌더링됨(page.tsx 참고) */
+.checkoutEventCard {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: 22px;
+}
+
+.checkoutPoster {
+  width: 60px;
+  height: 82px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface2);
+}
+
+.checkoutPoster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.checkoutPosterEmpty {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(160deg, #3a3560, #241f3d);
+}
+
+.checkoutEventInfo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.checkoutEventTitle {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+  margin-bottom: var(--space-1);
+  /* 제목이 길어도 왼쪽 패널 폭을 넘기지 않게 2줄에서 자름 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.checkoutEventLocation {
+  font-size: var(--font-sm);
+  color: var(--text-2);
+}
+
+.checkoutSummaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-md);
+  padding: 9px 0;
+}
+
+.checkoutSummaryLabel { color: var(--text-2); }
+
+.checkoutSummaryValue {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* 좌석번호는 이 화면에서 가장 확인하고 싶은 값이라 한 단계 크게 */
+.checkoutSeatValue {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.checkoutSummaryDivider {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 14px 0;
+}
+
+/* 총액 블록 — 패널 아래쪽에 붙임 (오른쪽 결제 영역 높이에 맞춰 늘어남) */
+.checkoutTotal { margin-top: auto; padding-top: 24px; }
+
+.checkoutTotalLabel {
+  font-size: var(--font-sm);
+  color: var(--text-2);
+  margin-bottom: var(--space-1);
+}
+
+.checkoutTotalValue {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.checkoutTotalUnit {
+  font-size: 16px;
+  font-weight: 500;
+  margin-left: 2px;
+}
+
+/* ── 오른쪽: 결제 (라이트) ── */
+/* 토스 위젯이 흰 배경 기준으로 렌더링되므로 이 영역만 밝은 테마.
+   전역 색상 변수(var(--text) 등)는 다크 기준이라 여기서는 값을 직접 지정한다. */
+.checkoutPayment {
+  background: #ffffff;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+}
+
+.checkoutPaymentTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #191f28;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-1);
+}
+
+.checkoutPaymentSubtitle {
+  font-size: var(--font-md);
+  color: #8b95a1;
+  margin-bottom: var(--space-4);
+}
+
+/* 위젯이 뜨기 전 자리를 잡아둬서 렌더 시 레이아웃이 튀지 않게 함 */
+.checkoutWidgetSlot { min-height: 200px; }
+
+/* 결제 버튼 — 위젯 아래에 항상 붙음 */
+.checkoutPayAction { margin-top: auto; padding-top: var(--space-4); }
+
+.checkoutPayBtn {
+  width: 100%;
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  font-size: var(--font-xl);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, opacity 0.12s;
+}
+
+.checkoutPayBtn:hover:not(:disabled) { background: var(--accent-hover); }
+.checkoutPayBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.checkoutSecureNote {
+  font-size: var(--font-sm);
+  color: #b0b8c1;
+  text-align: center;
+  margin-top: var(--space-2-5);
+}
+
+/* 흰 배경 위에서는 전역 .errorMsg(어두운 배경용)가 잘 안 보여서 밝은 버전 사용 */
+.checkoutErrorMsg {
+  font-size: var(--font-md);
+  color: #d64545;
+  background: #fdf2f2;
+  border: 1px solid #f5d5d5;
+  border-radius: 8px;
+  padding: var(--space-2-5) var(--space-3);
+  margin-bottom: var(--space-3);
+}

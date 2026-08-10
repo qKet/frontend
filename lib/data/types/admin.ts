@@ -5,6 +5,9 @@ export type AdminUser = {
   userStatus: string;
   roleId: number;
   roleName: string;
+  // 최종 수정자/수정일시 — 한 번도 수정 안 됐으면 둘 다 null
+  uptId: string | null;
+  uptDe: string | null;
 };
 
 export type Role = {
@@ -24,6 +27,8 @@ export type Program = {
   urlPath: string;
   programType: "MENU" | "PAGE";
   useYn: "Y" | "N";
+  uptId: string | null;
+  uptDe: string | null;
 };
 
 // 권한 확장 — 역할 × 프로그램 접근권한 매핑 한 칸 (권한 그리드의 체크박스 하나)
@@ -43,6 +48,8 @@ export type Menu = {
   menuNm: string;
   sortOrder: number;
   useYn: "Y" | "N";
+  uptId: string | null;
+  uptDe: string | null;
 };
 
 // 로그인 사용자가 접근 가능한 메뉴 트리 (SiteNav 렌더링용, GET /common/menus/my 응답)
@@ -54,4 +61,21 @@ export type MenuTreeNode = {
   sortOrder: number;
   parentMenuId: number | null;
   children: MenuTreeNode[];
+};
+
+// 예매 활동 로그(보고서) — RESERVATION_HISTORY 한 행. 일반 사용자용 Reservation과 달리
+// userId/insIp가 포함됨(관리자만 보는 값이라 별도 타입으로 분리)
+export type ReservationHistoryLog = {
+  historyId: number;
+  userId: string;
+  seatId: number;
+  roundId: number;
+  reservedStatus: "RESERVED" | "CANCELLED";
+  createdReserved: string;
+  insIp: string;
+  seatRow: string;
+  seatColume: string;
+  grade: string;
+  pTitle: string;
+  roundTime: string;
 };

@@ -15,6 +15,7 @@ import {
   type RoleProgram,
   type Role,
 } from "@/lib/api/admin";
+import { formatRoundTime } from "@/lib/utils/datetime";
 
 type RowChange = { programNm?: string; urlPath?: string; programType?: string; useYn?: string };
 
@@ -193,6 +194,8 @@ export default function AdminProgramsPage() {
               <th>URL 경로</th>
               <th>타입</th>
               <th>사용여부</th>
+              <th>최종수정자</th>
+              <th>최종수정일</th>
               {roles.map((r) => (
                 <th key={r.roleId} style={{ textAlign: "center" }}>{r.roleName}</th>
               ))}
@@ -240,6 +243,8 @@ export default function AdminProgramsPage() {
                       <option value="N">미사용</option>
                     </select>
                   </td>
+                  <td className="adminCellEmail">{p.uptId ?? "-"}</td>
+                  <td className="adminCellEmail">{p.uptDe ? formatRoundTime(p.uptDe) : "-"}</td>
                   {roles.map((r) => (
                     <td key={r.roleId} style={{ textAlign: "center" }}>
                       <input

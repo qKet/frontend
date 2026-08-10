@@ -116,6 +116,18 @@
   margin-bottom: 16px;
 }
 
+/* 보고서/조회 화면 상단 — 필터 입력 여러 개 + 조회 버튼을 한 줄로 배치 (adminFormRow를 가로로 나열) */
+.adminFilterBar {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.adminFilterBar .adminFormRow { margin-bottom: 0; }
+.adminFilterBar .adminInput,
+.adminFilterBar .adminSelect { width: auto; }
+
 .adminLabel {
   font-size: 12px;
   font-weight: 600;

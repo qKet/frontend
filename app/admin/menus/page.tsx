@@ -12,6 +12,7 @@ import {
   type Menu,
   type Program,
 } from "@/lib/api/admin";
+import { formatRoundTime } from "@/lib/utils/datetime";
 
 type RowChange = { menuNm?: string; programId?: number | null; parentMenuId?: number | null; sortOrder?: number; useYn?: string };
 type MenuRow = { menu: Menu; depth: number };
@@ -254,6 +255,8 @@ export default function AdminMenusPage() {
               <th>상위 메뉴</th>
               <th>순서</th>
               <th>사용여부</th>
+              <th>최종수정자</th>
+              <th>최종수정일</th>
               <th></th>
             </tr>
           </thead>
@@ -325,6 +328,8 @@ export default function AdminMenusPage() {
                       <option value="N">미사용</option>
                     </select>
                   </td>
+                  <td className="adminCellEmail">{m.uptId ?? "-"}</td>
+                  <td className="adminCellEmail">{m.uptDe ? formatRoundTime(m.uptDe) : "-"}</td>
                   <td>
                     <button className="btnDanger" onClick={() => handleDelete(m.menuId)}>삭제</button>
                   </td>

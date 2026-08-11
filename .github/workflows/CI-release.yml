@@ -41,15 +41,7 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      # CLUSTER_IP: next.config.mjs의 rewrites()가 output:"standalone" 빌드에서는 next build
-      # 시점에 한 번 계산돼서 고정됨(런타임에 다시 안 읽음) — 여기서 안 넣으면 rewrites()가
-      # 폴백값(http://localhost:8080)으로 굳어버려서, K8s Deployment의 env로 CLUSTER_IP를
-      # 나중에 넣어줘도 소용없음(실제로 겪은 버그: 컨테이너가 자기 자신한테 연결 시도하다 ECONNREFUSED).
-      # 값 자체는 release/prod 둘 다 동일 — K8s 짧은 서비스 이름은 호출한 파드와 같은 네임스페이스로
-      # 풀리므로, 이 문자열 그대로 양쪽 다 맞게 동작함.
       - name: Install & build
-        env:
-          CLUSTER_IP: http://qket-backend-service
         run: |
           npm ci
           npm run build

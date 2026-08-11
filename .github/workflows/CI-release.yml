@@ -32,9 +32,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Next.js 빌드를 Docker 안(멀티스테이지)이 아니라 여기서도 한 번 먼저 함 —
-      # cache: npm으로 의존성 캐싱되고, 빌드 실패가 Docker 빌드 로그에 안 파묻히고
-      # 여기서 바로 실패/표시됨. package.json에 별도 test 스크립트가 없어서 build만 검증.
+      # Next.js 빌드는 Docker 안(멀티스테이지)이 아니라 여기서 함 — Dockerfile은 이 결과물
+      # (.next/standalone 등)을 담기만 하는 single-stage(backend Dockerfile과 동일 패턴).
+      # cache: npm으로 의존성 캐싱되고, 빌드 실패가 Docker 빌드 로그에 안 파묻히고 여기서
+      # 바로 실패/표시됨. package.json에 별도 test 스크립트가 없어서 build만 검증.
       - uses: actions/setup-node@v4
         with:
           node-version: "20"

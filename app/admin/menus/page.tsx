@@ -264,6 +264,8 @@ export default function AdminMenusPage() {
             {menuRows.map(({ menu: m, depth }) => {
               const isDirty = !!changes[m.menuId];
               const excluded = getDescendantIds(menus, m.menuId); // 자기 자신 + 하위메뉴는 상위메뉴로 선택 불가(순환 방지)
+              // 아직 한 번도 수정 안 된 행은 등록자/등록일을 "최종수정" 자리에 대신 보여줌(등록도 최초의 터치로 취급)
+              const lastEdit = m.uptDe ? { uptId: m.uptId, uptDe: m.uptDe } : { uptId: m.insId, uptDe: m.insDe };
               return (
                 <tr key={m.menuId} className={isDirty ? "adminRowDirty" : ""}>
                   <td>
@@ -328,8 +330,8 @@ export default function AdminMenusPage() {
                       <option value="N">미사용</option>
                     </select>
                   </td>
-                  <td className="adminCellEmail">{m.uptId ?? "-"}</td>
-                  <td className="adminCellEmail">{m.uptDe ? formatRoundTime(m.uptDe) : "-"}</td>
+                  <td className="adminCellEmail">{lastEdit.uptId ?? "-"}</td>
+                  <td className="adminCellEmail">{lastEdit.uptDe ? formatRoundTime(lastEdit.uptDe) : "-"}</td>
                   <td>
                     <button className="btnDanger" onClick={() => handleDelete(m.menuId)}>삭제</button>
                   </td>

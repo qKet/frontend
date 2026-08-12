@@ -219,10 +219,12 @@ export default function AdminProgramsPage() {
             {programs.map((p) => {
               const isDirty = !!changes[p.programId];
               const roleMeta = roleProgramMeta[p.programId];
+              // 아직 한 번도 수정 안 된 행은 등록자/등록일을 "최종수정" 자리에 대신 보여줌(등록도 최초의 터치로 취급)
+              const programOwnEdit = p.uptDe ? { uptId: p.uptId, uptDe: p.uptDe } : { uptId: p.insId, uptDe: p.insDe };
               const lastEdit =
-                roleMeta?.uptDe && (!p.uptDe || roleMeta.uptDe > p.uptDe)
+                roleMeta?.uptDe && (!programOwnEdit.uptDe || roleMeta.uptDe > programOwnEdit.uptDe)
                   ? roleMeta
-                  : { uptId: p.uptId, uptDe: p.uptDe };
+                  : programOwnEdit;
               return (
                 <tr key={p.programId} className={isDirty ? "adminRowDirty" : ""}>
                   <td>

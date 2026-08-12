@@ -4,4 +4,8 @@ export type Category = {
   categoryNm: string;
   sortOrder: number;
   useYn: "Y" | "N";
+  insId?: string | null;
+  insDe?: string | null;
+  uptId?: string | null;
+  uptDe?: string | null;
 };

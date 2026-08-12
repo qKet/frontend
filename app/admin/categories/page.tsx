@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getAdminCategories, createCategory, updateCategory, deleteCategory, type Category } from "@/lib/api/admin";
+import { formatRoundTime } from "@/lib/utils/datetime";
 
 type RowChange = { categoryNm?: string; sortOrder?: number; useYn?: string };
 
@@ -164,6 +165,8 @@ export default function AdminCategoriesPage() {
               <th>카테고리명</th>
               <th>정렬순서</th>
               <th>사용여부</th>
+              <th>최종수정자</th>
+              <th>최종수정일</th>
               <th></th>
               <th></th>
             </tr>
@@ -171,6 +174,8 @@ export default function AdminCategoriesPage() {
           <tbody>
             {categories.map((c, idx) => {
               const isDirty = !!changes[c.categoryId];
+              // 아직 한 번도 수정 안 된 행은 등록자/등록일을 "최종수정" 자리에 대신 보여줌(등록도 최초의 터치로 취급)
+              const lastEdit = c.uptDe ? { uptId: c.uptId, uptDe: c.uptDe } : { uptId: c.insId, uptDe: c.insDe };
               return (
                 <tr key={c.categoryId} className={isDirty ? "adminRowDirty" : ""}>
                   <td>
@@ -200,6 +205,8 @@ export default function AdminCategoriesPage() {
                       <option value="N">미사용</option>
                     </select>
                   </td>
+                  <td className="adminCellEmail">{lastEdit.uptId ?? "-"}</td>
+                  <td className="adminCellEmail">{lastEdit.uptDe ? formatRoundTime(lastEdit.uptDe) : "-"}</td>
                   <td>
                     <button className="btnDanger" onClick={() => handleDelete(c.categoryId)}>삭제</button>
                   </td>

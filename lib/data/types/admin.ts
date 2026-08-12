@@ -27,6 +27,8 @@ export type Program = {
   urlPath: string;
   programType: "MENU" | "PAGE";
   useYn: "Y" | "N";
+  insId: string | null;
+  insDe: string | null;
   uptId: string | null;
   uptDe: string | null;
 };

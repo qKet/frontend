@@ -26,6 +26,9 @@ export default function AdminProgramsPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [mappings, setMappings] = useState<Set<string>>(new Set());
+  // programId → 그 프로그램의 권한 체크박스 중 가장 최근에 바뀐 것의 수정자/수정일
+  // (그리드 저장은 전체 delete+insert라 매핑이 하나라도 바뀌면 해당 programId의 모든 role 매핑이 같은 시각으로 갱신됨)
+  const [roleProgramMeta, setRoleProgramMeta] = useState<Record<number, { uptId: string | null; uptDe: string | null }>>({});
   const [loading, setLoading] = useState(true);
 
   // programId → 변경된 값
@@ -41,7 +44,17 @@ export default function AdminProgramsPage() {
     Promise.all([getPrograms(), getRoles(), getRoleMappings()]).then(([p, r, m]) => {
       setPrograms(p);
       setRoles(r);
-      setMappings(new Set(m.map((x) => `${x.roleId}-${x.programId}`)));
+      setMappings(new Set(m.filter((x) => x.useYn !== "N").map((x) => `${x.roleId}-${x.programId}`)));
+
+      const meta: Record<number, { uptId: string | null; uptDe: string | null }> = {};
+      m.forEach((x) => {
+        if (!x.uptDe) return;
+        const cur = meta[x.programId];
+        if (!cur || !cur.uptDe || x.uptDe > cur.uptDe) {
+          meta[x.programId] = { uptId: x.uptId ?? null, uptDe: x.uptDe };
+        }
+      });
+      setRoleProgramMeta(meta);
     });
 
   useEffect(() => {
@@ -205,6 +218,11 @@ export default function AdminProgramsPage() {
           <tbody>
             {programs.map((p) => {
               const isDirty = !!changes[p.programId];
+              const roleMeta = roleProgramMeta[p.programId];
+              const lastEdit =
+                roleMeta?.uptDe && (!p.uptDe || roleMeta.uptDe > p.uptDe)
+                  ? roleMeta
+                  : { uptId: p.uptId, uptDe: p.uptDe };
               return (
                 <tr key={p.programId} className={isDirty ? "adminRowDirty" : ""}>
                   <td>
@@ -243,8 +261,8 @@ export default function AdminProgramsPage() {
                       <option value="N">미사용</option>
                     </select>
                   </td>
-                  <td className="adminCellEmail">{p.uptId ?? "-"}</td>
-                  <td className="adminCellEmail">{p.uptDe ? formatRoundTime(p.uptDe) : "-"}</td>
+                  <td className="adminCellEmail">{lastEdit.uptId ?? "-"}</td>
+                  <td className="adminCellEmail">{lastEdit.uptDe ? formatRoundTime(lastEdit.uptDe) : "-"}</td>
                   {roles.map((r) => (
                     <td key={r.roleId} style={{ textAlign: "center" }}>
                       <input

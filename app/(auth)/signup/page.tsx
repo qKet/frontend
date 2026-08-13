@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signup, sendEmailVerificationCode, confirmEmailVerificationCode } from "@/lib/api/auth"
+import { signup, checkUserId, sendEmailVerificationCode, confirmEmailVerificationCode } from "@/lib/api/auth"
 import Button from "@/components/ui/Button";
 import FormField from "@/components/ui/FormField";
 import Input from "@/components/ui/Input";
@@ -27,6 +27,11 @@ export default function SignupPage() {
   // UI 상태
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // 아이디 중복확인 상태
+  const [idChecked, setIdChecked] = useState(false);
+  const [checkingId, setCheckingId] = useState(false);
+  const [idError, setIdError] = useState("");
 
   // 이메일 인증 상태
   const [emailSent, setEmailSent] = useState(false);
@@ -61,6 +66,24 @@ export default function SignupPage() {
         return prev - 1;
       });
     }, 1000);
+  };
+
+  const handleCheckId = async () => {
+    if (!userId) {
+      setIdError("아이디를 입력하세요.");
+      return;
+    }
+    setCheckingId(true);
+    setIdError("");
+    try {
+      await checkUserId(userId);
+      setIdChecked(true);
+    } catch (e) {
+      setIdChecked(false);
+      setIdError(e instanceof Error ? e.message : "중복확인에 실패했습니다.");
+    } finally {
+      setCheckingId(false);
+    }
   };
 
   const handleSendCode = async () => {
@@ -114,12 +137,16 @@ export default function SignupPage() {
       return;
     }
 
+    if (!idChecked) {
+      setError("아이디 중복확인을 해주세요.");
+      return;
+    }
+
     if (!emailVerified) {
       setError("이메일 인증을 완료해주세요.");
       return;
     }
 
-    //추후에 ID 중복확인 체킹 넣을지 말지 선택
     setLoading(true);
     setError("");
 
@@ -144,12 +171,27 @@ export default function SignupPage() {
         <p className="authDesc">새 계정을 만들어 공연을 예매하세요.</p>
 
         <FormField label="아이디">
-          <Input
-            placeholder="사용할 아이디"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-          />
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Input
+              placeholder="사용할 아이디"
+              value={userId}
+              onChange={(e) => {
+                setUserId(e.target.value);
+                setIdChecked(false); // 확인 후에도 다시 수정 가능 — 수정하면 확인 상태만 초기화(재확인 필요)
+              }}
+            />
+            <Button
+              variant="secondary"
+              type="button"
+              disabled={checkingId || idChecked}
+              onClick={handleCheckId}
+            >
+              {idChecked ? "확인완료" : checkingId ? "확인 중..." : "중복확인"}
+            </Button>
+          </div>
         </FormField>
+
+        {idError && <StatusMessage variant="error">{idError}</StatusMessage>}
 
         <FormField label="이름">
           <Input
@@ -165,10 +207,9 @@ export default function SignupPage() {
               type="email"
               placeholder="example@email.com"
               value={userEmail}
-              disabled={emailVerified}
               onChange={(e) => {
                 setUserEmail(e.target.value);
-                setEmailVerified(false);
+                setEmailVerified(false); // 인증 후에도 다시 수정 가능 — 수정하면 인증 상태 초기화(재인증 필요)
                 setEmailSent(false);
               }}
             />

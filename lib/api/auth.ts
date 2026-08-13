@@ -49,6 +49,17 @@ export async function logout(): Promise<ApiResult> {
 }
 
 // ============================================================
+// GET /api/auth/check-id
+// 백엔드: UserController.java → checkUserId()
+// 기능: 회원가입 폼의 "중복확인" 버튼 — 이미 사용 중이면 apiFetch가 Error(A011)를 throw
+//
+// 응답 JSON: { "success": true, "message": "사용 가능한 아이디입니다." }
+// ============================================================
+export async function checkUserId(userId: string): Promise<ApiResult> {
+  return apiFetch<ApiResult>(`/auth/check-id?userId=${encodeURIComponent(userId)}`);
+}
+
+// ============================================================
 // POST /api/auth/signup
 // 백엔드: UserController.java → register()
 // 기능: 회원가입

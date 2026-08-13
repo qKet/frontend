@@ -49,6 +49,17 @@ export async function logout(): Promise<ApiResult> {
 }
 
 // ============================================================
+// GET /api/auth/check-id
+// 백엔드: UserController.java → checkUserId()
+// 기능: 회원가입 폼의 "중복확인" 버튼 — 이미 사용 중이면 apiFetch가 Error(A011)를 throw
+//
+// 응답 JSON: { "success": true, "message": "사용 가능한 아이디입니다." }
+// ============================================================
+export async function checkUserId(userId: string): Promise<ApiResult> {
+  return apiFetch<ApiResult>(`/auth/check-id?userId=${encodeURIComponent(userId)}`);
+}
+
+// ============================================================
 // POST /api/auth/signup
 // 백엔드: UserController.java → register()
 // 기능: 회원가입
@@ -77,6 +88,36 @@ export async function signup(
   return apiFetch<ApiResult>("/auth/signup", {
     method: "POST",
     body: { userId, userNm, userEmail, pwd },
+  });
+}
+
+// ============================================================
+// POST /api/auth/email/verification-codes
+// 백엔드: EmailVerificationController.java → send()
+// 기능: 이메일로 6자리 인증번호 발송(SQS 발행 → Lambda → SES), 5분 TTL
+//
+// 요청 JSON: { "email": "a@a.com" }
+// 응답 JSON: { "success": true, "message": "인증번호를 발송했습니다." }
+// ============================================================
+export async function sendEmailVerificationCode(email: string): Promise<ApiResult> {
+  return apiFetch<ApiResult>("/auth/email/verification-codes", {
+    method: "POST",
+    body: { email },
+  });
+}
+
+// ============================================================
+// POST /api/auth/email/verification-codes/confirm
+// 백엔드: EmailVerificationController.java → confirm()
+// 기능: 인증번호 확인 — 통과하면 30분간 "인증완료" 상태(그 사이에 /auth/signup 호출해야 함)
+//
+// 요청 JSON: { "email": "a@a.com", "code": "123456" }
+// 응답 JSON: { "success": true, "message": "이메일 인증이 완료되었습니다." }
+// ============================================================
+export async function confirmEmailVerificationCode(email: string, code: string): Promise<ApiResult> {
+  return apiFetch<ApiResult>("/auth/email/verification-codes/confirm", {
+    method: "POST",
+    body: { email, code },
   });
 }
 

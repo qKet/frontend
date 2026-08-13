@@ -14,6 +14,7 @@
 
 import { useMemo, useState } from "react";
 import BookButton from "@/components/BookButton";
+import OpenAlertToggle from "@/components/OpenAlertToggle";
 import { getEventCalendar } from "@/lib/api/events";
 import { formatRoundTime, parseDateTime } from "@/lib/utils/datetime";
 import type { PerformanceRound } from "@/lib/data/types";
@@ -272,14 +273,17 @@ export default function RoundCalendar({ performanceId, rounds, title, location, 
               pagedRounds.map((round) => (
                 <div key={round.roundId} className="roundRow">
                   <span className="roundTime">{formatRoundTime(round.roundTime)}</span>
-                  <BookButton
-                    roundId={round.roundId}
-                    roundTime={round.roundTime}
-                    openTime={round.openTime}
-                    title={title}
-                    location={location}
-                    posterUrl={posterUrl}
-                  />
+                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                    <OpenAlertToggle roundId={round.roundId} openTime={round.openTime} />
+                    <BookButton
+                      roundId={round.roundId}
+                      roundTime={round.roundTime}
+                      openTime={round.openTime}
+                      title={title}
+                      location={location}
+                      posterUrl={posterUrl}
+                    />
+                  </div>
                 </div>
               ))
             )}

@@ -81,6 +81,36 @@ export async function signup(
 }
 
 // ============================================================
+// POST /api/auth/email/verification-codes
+// 백엔드: EmailVerificationController.java → send()
+// 기능: 이메일로 6자리 인증번호 발송(SQS 발행 → Lambda → SES), 5분 TTL
+//
+// 요청 JSON: { "email": "a@a.com" }
+// 응답 JSON: { "success": true, "message": "인증번호를 발송했습니다." }
+// ============================================================
+export async function sendEmailVerificationCode(email: string): Promise<ApiResult> {
+  return apiFetch<ApiResult>("/auth/email/verification-codes", {
+    method: "POST",
+    body: { email },
+  });
+}
+
+// ============================================================
+// POST /api/auth/email/verification-codes/confirm
+// 백엔드: EmailVerificationController.java → confirm()
+// 기능: 인증번호 확인 — 통과하면 30분간 "인증완료" 상태(그 사이에 /auth/signup 호출해야 함)
+//
+// 요청 JSON: { "email": "a@a.com", "code": "123456" }
+// 응답 JSON: { "success": true, "message": "이메일 인증이 완료되었습니다." }
+// ============================================================
+export async function confirmEmailVerificationCode(email: string, code: string): Promise<ApiResult> {
+  return apiFetch<ApiResult>("/auth/email/verification-codes/confirm", {
+    method: "POST",
+    body: { email, code },
+  });
+}
+
+// ============================================================
 // GET /api/auth/me
 // 백엔드: UserController.java → me()  (세션에 저장된 로그인 유저 정보를 그대로 돌려줌)
 // 기능: 현재 세션이 로그인 상태인지 확인 + 로그인 상태면 유저 정보 반환

@@ -19,7 +19,6 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import PageHeader from "@/components/ui/PageHeader";
 import StatusMessage from "@/components/ui/StatusMessage";
-import CancelAlertToggle from "@/components/CancelAlertToggle";
 
 
 // 등급 표시 라벨
@@ -260,11 +259,6 @@ export default function SeatsPage() {
             {/* 선택 정보 패널 */}
             <div className="seatPanel">
               <p className="seatPanelTitle">예매 정보</p>
-
-              {/* 좌석 선택 여부와 무관하게 이 회차(scheduleId) 전체에 대한 취소표 알림 구독 토글 */}
-              <div className="seatPanelRow" style={{ marginBottom: "var(--space-2)" }}>
-                <CancelAlertToggle roundId={Number(scheduleId)} />
-              </div>
 
               {!selected ? (
                 <p className="seatPanelEmpty">좌석을 선택하세요</p>

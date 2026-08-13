@@ -67,6 +67,31 @@
 
 .roundTime { font-size: var(--font-md); color: var(--text); }
 
+/* 예매 오픈 알림 버튼(OpenAlertToggle) 클릭 시 종 아이콘이 흔들리는 연출 */
+.bellRing {
+  display: inline-block;
+  transform-origin: 50% 0%;
+  animation: bellRing 0.5s ease;
+}
+
+@keyframes bellRing {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-18deg); }
+  40% { transform: rotate(14deg); }
+  60% { transform: rotate(-10deg); }
+  80% { transform: rotate(6deg); }
+}
+
+/* 예매 오픈 알림 신청 완료 상태 — badge.css의 badgeOpen("예매 가능")과 같은 성공 색상 토큰 재사용.
+   .btnSecondary와 같이 걸어서(합친 선택자) button.css의 소스 순서와 무관하게 항상 이기게 함 */
+.btnSecondary.btnAlertSubscribed {
+  background: var(--success-bg);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.btnSecondary.btnAlertSubscribed:hover { background: var(--success-bg); }
+
 /* 캐스팅 목록 — 화면 폭에 맞춰 자동 줄바꿈 */
 .castGrid {
   display: grid;

@@ -78,7 +78,11 @@ export default function SeatsPage() {
   };
 
   // 예매하기 버튼 클릭 시: 좌석을 바로 예약 확정하지 않고, 결제 수단 선택 화면(/payments/checkout)으로
-  // 이동만 함 — 실제 예약 확정(RESERVATIONS UPDATE)은 결제 승인(PAY01_PAYMENT03) 이후에 이뤄짐
+  // 이동만 함 — 실제 예약 확정(RESERVATIONS UPDATE)은 결제 승인(PAY01_PAYMENT03) 이후에 이뤄짐.
+  //
+  // 팀 논의 결과: 좌석 선택 단계에서 선점(hold)으로 미리 막지 않고, 결제 화면까지는 여러 명이
+  // 동시에 들어갈 수 있게 두기로 함 — 최종적으로 먼저 결제를 완료한 사람만 좌석을 가져가고,
+  // 늦은 사람은 confirm 시점의 락(ReservationServiceImpl.reserve)에서 걸러져 결제가 자동 취소(환불)됨.
   const handleReserve = () => {
     if (!selected) return;
 

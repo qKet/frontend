@@ -82,6 +82,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   width: 100%;
   padding: 11px 20px;
   margin-bottom: 10px;
@@ -92,6 +93,12 @@
   text-decoration: none;
   cursor: pointer;
   transition: opacity 0.12s;
+}
+
+.btnSocialIcon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
 }
 
 .btnSocial:hover { opacity: 0.85; }

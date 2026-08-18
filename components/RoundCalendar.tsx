@@ -85,7 +85,15 @@ export default function RoundCalendar({ performanceId, rounds, title, location, 
       })
     : dated.filter((r) => r.year === viewYear && r.month === viewMonth);
 
-  const daysWithRound = new Set(roundsThisMonth.map((r) => r.day));
+  // 이미 공연 시각이 지난 회차는 달력 표시(보라색 점)에서 제외 — BookButton의 "closed" 판정
+  // 기준(now >= roundTime)과 동일하게 맞춤. 날짜 자체는 여전히 숫자로 보이지만(muted 스타일),
+  // 클릭 가능한 "회차 있음" 표시는 안 함 — 지난 회차를 예매 가능한 것처럼 보여주지 않기 위함.
+  const now = Date.now();
+  const daysWithRound = new Set(
+    roundsThisMonth
+      .filter((r) => new Date(r.roundTime.replace(" ", "T")).getTime() > now)
+      .map((r) => r.day)
+  );
 
   // 달력 격자 계산 — Date.UTC 로 만들어 실행 환경 타임존과 무관하게 같은 요일이 나오게 함
   const firstWeekday = new Date(Date.UTC(viewYear, viewMonth - 1, 1)).getUTCDay();

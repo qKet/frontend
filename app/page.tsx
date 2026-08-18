@@ -37,6 +37,7 @@ const CARD_STATUS = {
   OPEN: { variant: "open", label: "예매 가능" },
   BEFORE: { variant: "closed", label: "예매 전" },
   SOLDOUT: { variant: "soldout", label: "매진" },
+  CLOSED: { variant: "closed", label: "예매 마감" },
 } as const;
 
 type CardStatus = keyof typeof CARD_STATUS;
@@ -65,11 +66,22 @@ function summarizeRounds(rounds: Round[]): { schedule: string; status: CardStatu
   // 오픈 시각 비교는 서버에서만 계산된다(Server Component라 클라이언트 재렌더가 없어
   // 하이드레이션 불일치 걱정은 없음). 시드의 open_time 은 전부 과거라 경계값 이슈도 없다.
   const now = Date.now();
-  const status: CardStatus = rounds.every((r) => r.roundStatus === "SOLDOUT")
-    ? "SOLDOUT"
-    : rounds.some((r) => new Date(r.openTime.replace(" ", "T")).getTime() <= now)
-      ? "OPEN"
-      : "BEFORE";
+
+  // 공연 시각(roundTime) 자체가 이미 지난 회차는 오픈 시각과 무관하게 예매가 불가능함
+  // (상세 화면의 BookButton과 동일한 기준 — "closed" 상태). 이걸 안 거르면 회차가 전부
+  // 과거인 공연도 "예매 가능"으로 잘못 표시됨(오픈 시각만 보고 판단했었기 때문).
+  const upcoming = rounds.filter(
+    (r) => new Date(r.roundTime.replace(" ", "T")).getTime() > now
+  );
+
+  const status: CardStatus =
+    upcoming.length === 0
+      ? "CLOSED"
+      : upcoming.every((r) => r.roundStatus === "SOLDOUT")
+        ? "SOLDOUT"
+        : upcoming.some((r) => new Date(r.openTime.replace(" ", "T")).getTime() <= now)
+          ? "OPEN"
+          : "BEFORE";
 
   return { schedule, status };
 }

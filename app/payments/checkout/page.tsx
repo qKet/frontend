@@ -11,12 +11,7 @@ import {
   ANONYMOUS,
   loadTossPayments,
 } from "@tosspayments/tosspayments-sdk";
-
-const GRADE_PRICE: Record<string, number> = {
-  VIP: 220000,
-  R: 154000,
-  S: 99000,
-};
+import { GRADE_PRICE, GRADE_LABEL } from "@/lib/constants/pricing";
 
 function CheckoutContent() {
   const router = useRouter();
@@ -27,6 +22,7 @@ function CheckoutContent() {
 
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const reservationId = searchParams.get("reservationId");
   const roundId = searchParams.get("roundId");
@@ -100,12 +96,6 @@ function CheckoutContent() {
     });
   }, [amount, isValid]);
 
-  const GRADE_LABEL: Record<string, string> = {
-    VIP: "VIP석",
-    R: "R석",
-    S: "S석",
-  };
-
   if (!isValid) {
     return (
       <div className="pageWrap">
@@ -124,7 +114,11 @@ function CheckoutContent() {
   }
 
   const handlePayment = async () => {
-  if (!ready || !widgetsRef.current) return;
+  // submitting 가드: 위젯이 뜨는 동안 버튼을 연타하면 requestPayment()가 중복 호출되어
+  // 결제창이 여러 번 열리거나 orderId가 여러 개 발급될 수 있어 반드시 재진입을 막아야 함
+  if (!ready || !widgetsRef.current || submitting) return;
+
+  setSubmitting(true);
 
   // successUrl/failUrl 은 토스가 paymentKey/orderId/amount(또는 code/message)를 쿼리스트링으로
   // 덧붙여 리다이렉트하는 주소. 우리가 미리 붙여둔 파라미터는 그대로 유지된 채 넘어가므로,
@@ -139,8 +133,13 @@ function CheckoutContent() {
       successUrl: `${window.location.origin}/payments/success?${forwardParams}`,
       failUrl: `${window.location.origin}/payments/fail?${forwardParams}`,
     });
+    // 성공 시 브라우저가 successUrl로 리다이렉트되며 이 컴포넌트는 언마운트되므로
+    // setSubmitting(false)를 여기서 호출할 필요는 없음(호출해도 무해하지만 불필요)
   } catch (error) {
     console.error("결제 요청 실패:", error);
+    // 사용자가 토스 위젯에서 결제창을 닫거나(취소) 실패한 경우 이 catch로 옴 —
+    // 리다이렉트가 안 일어나므로 반드시 다시 시도할 수 있게 풀어줘야 함
+    setSubmitting(false);
   }
 };
 
@@ -249,12 +248,14 @@ function CheckoutContent() {
             <button
               type="button"
               className="checkoutPayBtn"
-              disabled={!ready}
+              disabled={!ready || submitting}
               onClick={handlePayment}
             >
-              {ready
-                ? `${amount.toLocaleString("ko-KR")}원 결제하기`
-                : "결제위젯 불러오는 중..."}
+              {!ready
+                ? "결제위젯 불러오는 중..."
+                : submitting
+                ? "결제 진행 중..."
+                : `${amount.toLocaleString("ko-KR")}원 결제하기`}
             </button>
 
             <p className="checkoutSecureNote">

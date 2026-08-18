@@ -8,11 +8,21 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import Button from "@/components/ui/Button";
 import { getOpenAlertStatus, subscribeOpenAlert, unsubscribeOpenAlert } from "@/lib/api/notifications";
+import { parseDateTime } from "@/lib/utils/datetime";
 
 type Props = {
   roundId: number;
   openTime: string;
 };
+
+// 백엔드가 "2026-08-18 10:45:00" 형태(공백 구분)로 내려주는데, new Date(openTime)로 바로 파싱하면
+// 브라우저에 따라 Invalid Date가 나서(하이드레이션 에러 방지 목적으로 이 프로젝트 전체가 이 형식을
+// 씀 — BookButton.tsx/lib/utils/datetime.ts 참고) 값 비교가 항상 실패했었음(버튼이 안 뜨는 버그였음).
+// parseDateTime으로 안전하게 분해한 뒤 숫자 생성자로 Date를 만들면 모든 브라우저에서 동일하게 동작함.
+function toTimestamp(value: string): number {
+  const { year, month, day, hour, minute } = parseDateTime(value);
+  return new Date(year, month - 1, day, hour, minute).getTime();
+}
 
 export default function OpenAlertToggle({ roundId, openTime }: Props) {
   const router = useRouter();
@@ -21,7 +31,7 @@ export default function OpenAlertToggle({ roundId, openTime }: Props) {
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [ringing, setRinging] = useState(false); // 클릭 시 종 아이콘 흔들리는 연출(.bellRing, styles/detail.css) 트리거용
-  const [beforeOpen, setBeforeOpen] = useState(() => new Date(openTime).getTime() > Date.now());
+  const [beforeOpen, setBeforeOpen] = useState(() => toTimestamp(openTime) > Date.now());
 
   // 로그인 상태에서만 현재 구독 여부를 물어봄 — 비로그인 상태로 호출하면 백엔드가 401을 주므로 그냥 꺼둔 채로 둠
   useEffect(() => {
@@ -37,7 +47,7 @@ export default function OpenAlertToggle({ roundId, openTime }: Props) {
   // BookButton.tsx와 동일한 패턴 — 1초마다 open_time을 다시 확인해서, 페이지를 계속 켜놓고 있어도
   // 오픈되는 순간 새로고침 없이 버튼이 알아서 사라지게 함
   useEffect(() => {
-    const check = () => setBeforeOpen(new Date(openTime).getTime() > Date.now());
+    const check = () => setBeforeOpen(toTimestamp(openTime) > Date.now());
     check();
     const id = setInterval(check, 1000);
     return () => clearInterval(id);

@@ -211,6 +211,10 @@ export default function SignupPage() {
                 setUserEmail(e.target.value);
                 setEmailVerified(false); // 인증 후에도 다시 수정 가능 — 수정하면 인증 상태 초기화(재인증 필요)
                 setEmailSent(false);
+                // 이전 이메일로 보낸 인증번호의 카운트다운이 남아있으면 새 이메일인데도 "재전송 대기"로
+                // 버튼이 막혀버림 — 이메일이 바뀌는 순간 카운트다운도 같이 초기화
+                if (intervalRef.current) clearInterval(intervalRef.current);
+                setRemainingSec(0);
               }}
             />
             <Button

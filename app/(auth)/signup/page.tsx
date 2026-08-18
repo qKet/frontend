@@ -191,6 +191,7 @@ export default function SignupPage() {
           </div>
         </FormField>
 
+        {idChecked && <StatusMessage variant="success">사용 가능한 아이디입니다.</StatusMessage>}
         {idError && <StatusMessage variant="error">{idError}</StatusMessage>}
 
         <FormField label="이름">

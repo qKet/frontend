@@ -19,13 +19,7 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import PageHeader from "@/components/ui/PageHeader";
 import StatusMessage from "@/components/ui/StatusMessage";
-
-
-// 등급 표시 라벨
-const GRADE_LABEL: Record<string, string> = { VIP: "VIP석", R: "R석", S: "S석" };
-
-// 등급별 가격 (백엔드에서 받아올 수도 있음)
-const GRADE_PRICE: Record<string, string> = { VIP: "220,000원", R: "154,000원", S: "99,000원" };
+import { GRADE_PRICE, GRADE_LABEL } from "@/lib/constants/pricing";
 
 export default function SeatsPage() {
   //동적라우팅 값 가져오기
@@ -278,7 +272,9 @@ export default function SeatsPage() {
                   </div>
                   <div className="seatPanelRow">
                     <span className="seatPanelLabel">가격</span>
-                    <span className="seatPanelValue">{GRADE_PRICE[selected.grade]}</span>
+                    <span className="seatPanelValue">
+                      {(GRADE_PRICE[selected.grade] ?? 0).toLocaleString("ko-KR")}원
+                    </span>
                   </div>
                   <hr className="seatPanelDivider" />
 

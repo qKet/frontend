@@ -100,11 +100,14 @@ export default async function EventsPage({
   if (categoryId != null) eventsQuery.set("categoryId", String(categoryId));
   if (keyword) eventsQuery.set("keyword", keyword);
 
+  // 카테고리/공연 목록은 몇 초~몇 분 단위로도 잘 안 바뀌는 데이터라 no-store로 매번 backend까지
+  // 재왕복하지 않고 1분 단위로 재검증 — 홈이 트래픽이 제일 몰리는 페이지라 부하테스트에서 가장 먼저
+  // 무너진 원인이었음(frontend#27, wiki/troubleshooting/loadtest-10000-open-run-cascading-failures.md)
   //카테고리 목록 + events api 호출 (페이지 단위, 카테고리 필터·검색어 포함)
   const [categoriesRes, res] = await Promise.all([
-    fetch(`${BASE_URL}/api/categories`, { cache: "no-store" }),
+    fetch(`${BASE_URL}/api/categories`, { next: { revalidate: 60 } }),
     fetch(`${BASE_URL}/api/events/paged?${eventsQuery.toString()}`, {
-      cache: "no-store",
+      next: { revalidate: 60 },
     }),
   ]);
   // GET /api/events/paged, /api/categories 는 GlobalResponseAdvice가

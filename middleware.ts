@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// /admin/* 라우트에 대한 서버 단 접근 제어.
+// /admin/*, /performances/* 라우트에 대한 서버 단 접근 제어.
+// 아래 클라이언트 사이드 체크는 화면이 이미 뜬 "다음"에 확인하는 거라 이것보다 늦음)
 //
 // 기존에는 각 admin 페이지(app/admin/*/page.tsx)가 클라이언트 컴포넌트 안에서
 // useEffect(() => { if (userSession.roleId !== 3) router.replace("/") })로만 막고 있었음.
@@ -10,13 +11,19 @@ import { NextRequest, NextResponse } from "next/server";
 // 로그인 여부와 무관하게 누구나 다운로드해서 볼 수 있음.
 //
 // 여기서는 요청이 실제 페이지 컴포넌트에 도달하기 전에, 백엔드 세션(쿠키)을 그대로 넘겨서
-// /api/auth/me로 역할을 확인하고, 관리자(roleId === 3)가 아니면 그 자리에서 "/"로 리다이렉트함.
+// /api/auth/me로 역할을 확인하고, 그 경로에 허용된 역할이 아니면 그 자리에서 "/"로 리다이렉트함.
 // 기존 클라이언트 사이드 체크는 그대로 둬도 됨(이중 방어 — 여기서 미들웨어를 우회할 방법을
 // 찾더라도 클라이언트 쪽에서 한 번 더 막힘).
 const BASE_URL = process.env.CLUSTER_IP ?? "http://localhost:8080";
 
 export async function middleware(request: NextRequest) {
   const cookie = request.headers.get("cookie");
+
+  //   /admin/*        → 관리자(roleId 3)만
+  //   /performances/* → 공연 등록/수정 화면. 매니저(roleId 2)도 쓸 수 있는 기능이라
+  //                      관리자와 매니저 둘 다 허용
+  const isAdminPath = request.nextUrl.pathname.startsWith("/admin");
+  const allowedRoleIds = isAdminPath ? [3] : [2, 3];
 
   try {
     const res = await fetch(`${BASE_URL}/api/auth/me`, {
@@ -26,7 +33,7 @@ export async function middleware(request: NextRequest) {
     const data = await res.json().catch(() => null);
     const roleId = data?.success ? data.user?.roleId : undefined;
 
-    if (roleId !== 3) {
+    if (!allowedRoleIds.includes(roleId)) {
       return NextResponse.redirect(new URL("/", request.url));
     }
   } catch {
@@ -38,5 +45,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/performances/:path*"],
 };

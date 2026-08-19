@@ -68,9 +68,15 @@ jobs:
           node-version: "20"
           cache: "npm"
 
+      # NEXT_PUBLIC_FARO_COLLECTOR_URL도 위 토스 키와 같은 이유(빌드 시점에 JS 번들에 박힘)로
+      # 여기서 넣어줌 — 토스 키와 달리 이건 비밀값이 아니라 그냥 공개 엔드포인트 URL이라
+      # Secrets Manager 안 거치고 여기 직접 적음. Infra/02_k8s-addon의 faro_ingress가 만드는
+      # dev.jun979.click/faro-collector 경로와 짝이 맞아야 함 — 그 경로 바뀌면 여기도 같이 바꿔야 함.
       - name: Install & build
         env:
           NEXT_PUBLIC_TOSS_CLIENT_KEY: ${{ steps.toss.outputs.key }}
+          NEXT_PUBLIC_FARO_COLLECTOR_URL: https://dev.jun979.click/faro-collector
+          NEXT_PUBLIC_APP_ENV: release
         run: |
           npm ci
           npm run build

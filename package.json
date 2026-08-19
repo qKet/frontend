@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@grafana/faro-web-sdk": "^1.13.2",
     "@tosspayments/tosspayments-sdk": "^2.7.1",
     "next": "14.2.30",
     "react": "18.3.1",

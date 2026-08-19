@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import SiteNav from "@/components/SiteNav";
 import { AuthProvider } from "@/context/AuthContext";
+import FaroInit from "@/components/FaroInit";
 
 export const metadata: Metadata = {
   title: "Q-Ket",
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko">
 
       <body>
+        <FaroInit />
         <AuthProvider>
           <SiteNav />
           {children}

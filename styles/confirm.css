@@ -1,0 +1,77 @@
+/* 전역 확인창 — confirm() 대체. components/ui/ConfirmProvider.tsx 참고. */
+
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: confirmFadeIn 0.15s ease-out;
+}
+
+.confirmModal {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  padding: 24px 20px 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  animation: confirmPopIn 0.18s ease-out;
+}
+
+.confirmMessage {
+  font-size: var(--font-xl);
+  color: var(--text);
+  line-height: 1.6;
+  text-align: center;
+  white-space: pre-line;
+  margin-bottom: var(--space-4);
+}
+
+.confirmActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.confirmBtn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: var(--font-md);
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text);
+}
+
+.confirmCancel {
+  background: var(--surface);
+  color: var(--text-2);
+}
+
+.confirmOk {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.confirmDanger {
+  background: var(--error);
+  border-color: var(--error);
+  color: white;
+}
+
+@keyframes confirmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes confirmPopIn {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}

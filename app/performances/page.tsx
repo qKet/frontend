@@ -19,6 +19,8 @@ import PageHeader from "@/components/ui/PageHeader";
 import FormField from "@/components/ui/FormField";
 import Input from "@/components/ui/Input";
 import StatusMessage from "@/components/ui/StatusMessage";
+import { useToast } from "@/components/ui/ToastProvider";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
 
 const toMysqlDatetime = (v: string) => {
   if (!v) return v;
@@ -34,12 +36,19 @@ const toInputDatetime = (v: string) => {
 const isLocked = (perf: Performance) =>
   perf.rounds?.some(r => new Date(r.openTime) <= new Date()) ?? false;
 
+// 홈(app/page.tsx)이 60초 캐시(next: { revalidate: 60 })를 쓰기 때문에, 여기서 공연/회차를
+// 수정·삭제해도 최악의 경우 60초 넘게 홈에 반영이 안 될 수 있음. 변경 성공 직후 이걸 호출해서
+// 홈 캐시를 즉시 무효화함 (app/revalidate/route.ts 참고).
+const revalidateHome = () => fetch("/revalidate", { method: "POST" }).catch(() => {});
+
 // 한 페이지에 보여줄 공연 개수
 const PAGE_SIZE = 10;
 
 export default function AdminPerformancesPage() {
   const router = useRouter();
   const { userSession, isLoading } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
 
   const [performances, setPerformances] = useState<Performance[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -178,6 +187,7 @@ export default function AdminPerformancesPage() {
           : p)
       );
       setEditMsg({ text: "저장되었습니다.", ok: true });
+      revalidateHome();
     } catch (e: any) {
       setEditMsg({ text: e?.message ?? "저장에 실패했습니다.", ok: false });
     } finally { setEditSaving(false); }
@@ -185,12 +195,13 @@ export default function AdminPerformancesPage() {
 
   const handleDeleteRound = async (roundId: number) => {
     if (!editingPerf) return;
-    if (!confirm("이 회차를 삭제하시겠습니까?")) return;
+    if (!(await confirm("이 회차를 삭제하시겠습니까?", { danger: true }))) return;
     try {
       await deleteRound(editingPerf.performanceId, roundId);
       const updated = { ...editingPerf, rounds: editingPerf.rounds.filter(r => r.roundId !== roundId) };
       setEditingPerf(updated);
       setPerformances(prev => prev.map(p => p.performanceId === editingPerf.performanceId ? updated : p));
+      revalidateHome();
     } catch (e: any) {
       setEditMsg({ text: e?.message ?? "회차 삭제에 실패했습니다.", ok: false });
     }
@@ -219,6 +230,7 @@ export default function AdminPerformancesPage() {
       setPerformances(prev => prev.map(p => p.performanceId === editingPerf.performanceId ? updated : p));
       setNewRound({ roundTime: "", openTime: "" });
       setEditMsg({ text: "회차가 추가되었습니다.", ok: true });
+      revalidateHome();
     } catch (e: any) {
       setEditMsg({ text: e?.message ?? "회차 추가에 실패했습니다.", ok: false });
     } finally { setAddingRound(false); }
@@ -226,12 +238,13 @@ export default function AdminPerformancesPage() {
 
   const handleDeletePerformance = async (perf: Performance) => {
     if (isLocked(perf)) return;
-    if (!confirm(`"${perf.pTitle}" 공연을 삭제하시겠습니까?`)) return;
+    if (!(await confirm(`"${perf.pTitle}" 공연을 삭제하시겠습니까?`, { danger: true }))) return;
     try {
       await deletePerformance(perf.performanceId);
       setPerformances(prev => prev.filter(p => p.performanceId !== perf.performanceId));
+      revalidateHome();
     } catch (e: any) {
-      alert(e?.message ?? "삭제에 실패했습니다.");
+      toast.error(e?.message ?? "삭제에 실패했습니다.");
     }
   };
 

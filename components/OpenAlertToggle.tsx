@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import Button from "@/components/ui/Button";
 import { getOpenAlertStatus, subscribeOpenAlert, unsubscribeOpenAlert } from "@/lib/api/notifications";
 import { parseDateTime } from "@/lib/utils/datetime";
+import { useToast } from "@/components/ui/ToastProvider";
 
 type Props = {
   roundId: number;
@@ -27,6 +28,7 @@ function toTimestamp(value: string): number {
 export default function OpenAlertToggle({ roundId, openTime }: Props) {
   const router = useRouter();
   const { userSession } = useAuth();
+  const toast = useToast();
 
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -58,7 +60,7 @@ export default function OpenAlertToggle({ roundId, openTime }: Props) {
 
   const handleClick = async () => {
     if (!userSession) {
-      alert("로그인 후 이용해주세요.");
+      toast.error("로그인 후 이용해주세요.");
       router.push("/login");
       return;
     }
@@ -70,7 +72,7 @@ export default function OpenAlertToggle({ roundId, openTime }: Props) {
         : await subscribeOpenAlert(roundId);
       setSubscribed(next);
     } catch {
-      alert("예매 오픈 알림 설정에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      toast.error("예매 오픈 알림 설정에 실패했습니다. 잠시 후 다시 시도해주세요.");
     } finally {
       setLoading(false);
     }

@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import QueueModal from "@/components/QueueModal";
+import { useToast } from "@/components/ui/ToastProvider";
 
 type Props = {
   roundId: number;
@@ -28,6 +29,7 @@ type ButtonState = "Before" | "pending" | "open" | "closed";
 export default function BookButton({ roundId, openTime, roundTime, title, location, posterUrl }: Props) {
   const router = useRouter();
   const { userSession } = useAuth();
+  const toast = useToast();
 
   const [state, setState] = useState<ButtonState>("Before");
   const [showQueue, setShowQueue] = useState(false);
@@ -83,9 +85,10 @@ if (now >= round) {
           style={{ padding: "var(--space-1) var(--space-3)", fontSize: "var(--font-base)" }}
           onClick={() => {
             const now = new Date().toLocaleString("ko-KR");
-            alert(`예매 오픈 전입니다.\n현재 시각: ${now}\n오픈 시각: ${new Date(openTime).toLocaleString("ko-KR")}`);
-            console.log(`예매 오픈 전입니다.\n현재 시각: ${now}\n오픈 시각: ${new Date(openTime).toLocaleString("ko-KR")}`);
-
+            const message = `예매 오픈 전입니다.\n현재 시각: ${now}\n오픈 시각: ${new Date(openTime).toLocaleString("ko-KR")}`;
+            // 시간 정보가 많아 기본 토스트(3.5초)보다 조금 더 길게(5초) 보여줌
+            toast.info(message, 5000);
+            console.log(message);
           }}
         >
           예매하기
@@ -102,7 +105,9 @@ if (now >= round) {
   // [BOOK-OPEN] 오픈 이후 — 로그인 확인 후 대기열 팝업 오픈 (부모 페이지는 팝업 뒤에서 잠김)
   const handleBook = () => {
     if (!userSession) {
-      alert("로그인 후 이용해주세요.");
+      // alert()는 "확인"을 눌러야 다음으로 넘어가는 블로킹 팝업이라, 토스트로 안내만 띄우고
+      // 페이지 이동은 그 응답을 기다리지 않고 바로 진행함(2026-08-21).
+      toast.error("로그인 후 이용해주세요.");
       router.push("/login");
       return;
     }

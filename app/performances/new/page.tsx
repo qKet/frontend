@@ -16,6 +16,11 @@ import FormField from "@/components/ui/FormField";
 import Input from "@/components/ui/Input";
 import StatusMessage from "@/components/ui/StatusMessage";
 
+// 홈(app/page.tsx)이 60초 캐시(next: { revalidate: 60 })를 쓰기 때문에, 방금 등록한 공연이
+// 최악의 경우 60초 넘게 홈에 안 보일 수 있음. 등록 성공 직후 이걸 호출해서 홈 캐시를 즉시 무효화함
+// (app/revalidate/route.ts 참고 — 캐시 정책 자체는 그대로 두고 "방금 바꾼 이 순간"만 예외 처리).
+const revalidateHome = () => fetch("/revalidate", { method: "POST" }).catch(() => {});
+
 type Round = { roundTime: string; openTime: string };
 type NewPerformance = { pTitle: string; venueId: number; categoryId: number; posterUrl: string };
 
@@ -128,6 +133,7 @@ export default function AdminPerformancesPage() {
       setPerfForm({ pTitle: "", venueId: venues[0]?.venueId ?? 0, categoryId: categories[0]?.categoryId ?? 0, posterUrl: "" });
       setPerfRounds([{ ...EMPTY_ROUND }]);
       setPreviewUrl("");
+      revalidateHome();
       setTimeout(() => router.push("/performances"), 1200);
     } catch (err: any) {
       setMsg({ text: err?.message ?? "공연 추가에 실패했습니다.", ok: false });

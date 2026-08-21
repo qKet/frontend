@@ -1,0 +1,119 @@
+/* 전역 토스트 알림 — alert() 대체. components/ui/ToastProvider.tsx 참고.
+   화면 상단 중앙 고정 + 큰 텍스트로 배치함. 우측 상단 + 작은 크기는 실사용 테스트에서
+   "잘 안 보인다"는 피드백이 있어서 2026-08-21에 이렇게 바꿈. */
+
+.toastContainer {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  pointer-events: none;
+  width: 100%;
+  padding: 0 16px;
+}
+
+.toastItem {
+  pointer-events: auto;
+  cursor: pointer;
+  width: 100%;
+  max-width: 380px;
+  padding: 16px 16px;
+  border-radius: 10px;
+  font-size: var(--font-xl);
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface2);
+  border: 1.5px solid var(--border-strong);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  animation: toastIn 0.2s ease-out;
+  white-space: pre-line;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* 클릭으로 닫거나 노출시간이 지나면 나타날 때와 반대로 위로 슬라이드하며 사라짐 */
+.toastLeaving {
+  animation: toastOut 0.2s ease-in forwards;
+}
+
+/* 메시지에 줄바꿈이 있을 때(제목+본문 구조) — 제목은 더 굵고 크게 강조, 본문은 흐리고 작게.
+   디자인 토큰에 xl(15px)과 2xl(32px) 사이가 없어서 17px을 직접 지정함. */
+.toastTitle {
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--warning);
+}
+
+.toastBody {
+  margin-top: var(--space-1);
+  font-size: var(--font-md);
+  font-weight: 400;
+  color: var(--text-2);
+  white-space: pre-line;
+  line-height: 1.5;
+}
+
+.toast-error .toastBody,
+.toast-success .toastBody {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.toast-error {
+  border-color: rgba(248, 113, 113, 0.6);
+  background: #2a1414;
+  color: var(--error);
+}
+
+.toast-success {
+  border-color: rgba(34, 197, 94, 0.6);
+  background: #12261a;
+  color: var(--success);
+}
+
+.toast-info {
+  border-color: var(--border-strong);
+  background: var(--surface2);
+  color: var(--text);
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+
+@media (max-width: 480px) {
+  .toastContainer {
+    padding: 0 12px;
+    top: 16px;
+  }
+
+  .toastItem {
+    max-width: none;
+    font-size: var(--font-lg);
+    padding: 14px 18px;
+  }
+}

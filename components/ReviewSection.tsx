@@ -2,12 +2,13 @@
 
 // 공연 상세 화면 "감상평" 탭 내용 (REV01). PerformanceTabs.tsx 에서 렌더링됨.
 // 마이페이지(app/mypage/page.tsx)의 리스트+본인만 액션 패턴을 그대로 따름:
-// 목록은 useState+useEffect로 불러오고, 삭제는 confirm() 후 실행, 실패는 alert()로 보여줌.
+// 목록은 useState+useEffect로 불러오고, 삭제는 confirm() 후 실행, 실패는 토스트(useToast)로 보여줌.
 //
 // 감상평은 "회차" 단위 — 같은 공연도 회차를 여러 번 예매해서 봤으면 회차별로 따로 쓸 수 있음.
 // 그래서 작성 폼에는 "예매했지만 아직 감상평 안 쓴 회차" 중에서 고르는 드롭다운이 있음.
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import type { Review, ReviewableRound } from "@/lib/data/types";
 import { getReviews, getReviewableRounds, writeReview, updateReview, deleteReview } from "@/lib/api/reviews";
@@ -17,6 +18,8 @@ import FormField from "@/components/ui/FormField";
 import Textarea from "@/components/ui/Textarea";
 import StatusMessage from "@/components/ui/StatusMessage";
 import StarRating from "@/components/ui/StarRating";
+import { useToast } from "@/components/ui/ToastProvider";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
 
 type Props = { performanceId: number };
 
@@ -41,6 +44,7 @@ function ReviewForm({
   onSubmit: (content: string, rating: number, roundId?: number) => Promise<void>;
   onCancel?: () => void;
 }) {
+  const toast = useToast();
   const [roundId, setRoundId] = useState<number | "">(rounds?.[0]?.roundId ?? "");
   const [content, setContent] = useState(initialContent);
   const [rating, setRating] = useState(initialRating);
@@ -48,18 +52,18 @@ function ReviewForm({
 
   const handleSubmit = async () => {
     if (rounds && roundId === "") {
-      alert("회차를 선택하세요.");
+      toast.error("회차를 선택하세요.");
       return;
     }
     if (!content.trim()) {
-      alert("감상평 내용을 입력하세요.");
+      toast.error("감상평 내용을 입력하세요.");
       return;
     }
     setSubmitting(true);
     try {
       await onSubmit(content, rating, rounds ? Number(roundId) : undefined);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "처리에 실패했습니다.");
+      toast.error(e instanceof Error ? e.message : "처리에 실패했습니다.");
     } finally {
       setSubmitting(false);
     }
@@ -176,7 +180,10 @@ function ReviewCard({
 }
 
 export default function ReviewSection({ performanceId }: Props) {
+  const router = useRouter();
   const { userSession } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reservedRounds, setReservedRounds] = useState<ReviewableRound[]>([]);
   const [loading, setLoading] = useState(true);
@@ -215,51 +222,75 @@ export default function ReviewSection({ performanceId }: Props) {
   };
 
   const handleDelete = async (reviewId: number) => {
-    if (!confirm("감상평을 삭제하시겠습니까?")) return;
+    if (!(await confirm("감상평을 삭제하시겠습니까?", { danger: true }))) return;
     try {
       await deleteReview(reviewId);
       setReviews((prev) => prev.filter((r) => r.reviewId !== reviewId));
     } catch (e) {
-      alert(e instanceof Error ? e.message : "삭제에 실패했습니다.");
+      toast.error(e instanceof Error ? e.message : "삭제에 실패했습니다.");
     }
+  };
+
+  // 버튼을 항상 보여주되(예매 여부와 무관하게), 눌렀을 때 자격을 확인함 — BookButton/OpenAlertToggle과
+  // 같은 패턴(2026-08-21). 예전엔 예매 내역이 없으면 버튼 자체가 안 보였는데, 그러면 "왜 안 보이는지"
+  // 사용자가 알 방법이 없어서 눌렀을 때 토스트로 이유를 안내하는 쪽으로 바꿈.
+  const handleWriteClick = () => {
+    if (!userSession) {
+      toast.error("로그인 후 이용해주세요.");
+      router.push("/login");
+      return;
+    }
+    if (availableRounds.length === 0) {
+      toast.error("예매한 회차가 있어야 감상평을 작성할 수 있습니다.");
+      return;
+    }
+    setWriting(true);
   };
 
   return (
     <div>
-      {userSession &&
-        availableRounds.length > 0 &&
-        (writing ? (
-          <ReviewForm
-            rounds={availableRounds}
-            submitLabel="등록"
-            onCancel={() => setWriting(false)}
-            onSubmit={handleWrite}
-          />
-        ) : (
-          <Button
-            variant="secondary"
-            onClick={() => setWriting(true)}
-            style={{ marginBottom: "var(--space-4)" }}
-          >
-            감상평 작성하기
+      {/* 제목 + 작성 버튼을 같은 줄에 둬서 "감상평 섹션의 주요 액션"이라는 게 한눈에 보이게 함.
+          버튼만 혼자 위에 떠 있던 예전 배치보다 이 화면의 다른 섹션 헤더들과도 톤이 맞음. */}
+      <div className="reviewSectionHeader">
+        <p className="reviewSectionTitle">감상평 {reviews.length > 0 && `${reviews.length}개`}</p>
+        {!writing && (
+          <Button variant="primary" className="reviewWriteBtn" onClick={handleWriteClick}>
+            ✍️ 감상평 남기기
           </Button>
-        ))}
+        )}
+      </div>
+
+      {writing && availableRounds.length > 0 && (
+        <ReviewForm
+          rounds={availableRounds}
+          submitLabel="등록"
+          onCancel={() => setWriting(false)}
+          onSubmit={handleWrite}
+        />
+      )}
 
       {loading && <StatusMessage variant="loading">불러오는 중...</StatusMessage>}
 
-      {!loading && reviews.length === 0 && <p className="detailEmpty">아직 작성된 감상평이 없습니다.</p>}
+      {/* 목록이 비어 있어도 카드처럼 테두리가 있는 패널 안에 놓아서 허공에 텍스트만 떠 있지 않게 함 */}
+      {!loading && reviews.length === 0 && (
+        <div className="reviewListPanel reviewListEmpty">
+          <p className="detailEmpty">아직 작성된 감상평이 없습니다.</p>
+        </div>
+      )}
 
-      <div className="reviewList">
-        {reviews.map((review) => (
-          <ReviewCard
-            key={review.reviewId}
-            review={review}
-            isMine={review.userId === userSession?.userId}
-            onUpdate={(content, rating) => handleUpdate(review.reviewId, content, rating)}
-            onDelete={() => handleDelete(review.reviewId)}
-          />
-        ))}
-      </div>
+      {!loading && reviews.length > 0 && (
+        <div className="reviewListPanel reviewList">
+          {reviews.map((review) => (
+            <ReviewCard
+              key={review.reviewId}
+              review={review}
+              isMine={review.userId === userSession?.userId}
+              onUpdate={(content, rating) => handleUpdate(review.reviewId, content, rating)}
+              onDelete={() => handleDelete(review.reviewId)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -5,6 +5,9 @@ export type AdminUser = {
   userStatus: string;
   roleId: number;
   roleName: string;
+  // 최종 수정자/수정일시 — 한 번도 수정 안 됐으면 둘 다 null
+  uptId: string | null;
+  uptDe: string | null;
 };
 
 export type Role = {
@@ -24,12 +27,21 @@ export type Program = {
   urlPath: string;
   programType: "MENU" | "PAGE";
   useYn: "Y" | "N";
+  insId: string | null;
+  insDe: string | null;
+  uptId: string | null;
+  uptDe: string | null;
 };
 
 // 권한 확장 — 역할 × 프로그램 접근권한 매핑 한 칸 (권한 그리드의 체크박스 하나)
+// useYn/uptId/uptDe는 조회 응답에만 내려오는 값 — 저장 요청(updateRoleMappings) 시에는 안 보내도 됨(서버가 세션 사용자로 채움).
+// 체크 해제된 매핑도 use_yn='N'으로 행이 남아있으므로(소프트 삭제), 조회 응답에는 useYn='N'인 항목도 섞여서 옴 — 체크 여부는 useYn==='Y'로 판단해야 함
 export type RoleProgram = {
   roleId: number;
   programId: number;
+  useYn?: "Y" | "N";
+  uptId?: string | null;
+  uptDe?: string | null;
 };
 
 // 메뉴관리 — 그리드에서 관리하는 메뉴 한 행 (programNm/urlPath는 화면 표시용으로 조인되어 내려옴)
@@ -43,6 +55,10 @@ export type Menu = {
   menuNm: string;
   sortOrder: number;
   useYn: "Y" | "N";
+  insId: string | null;
+  insDe: string | null;
+  uptId: string | null;
+  uptDe: string | null;
 };
 
 // 로그인 사용자가 접근 가능한 메뉴 트리 (SiteNav 렌더링용, GET /common/menus/my 응답)
@@ -54,4 +70,21 @@ export type MenuTreeNode = {
   sortOrder: number;
   parentMenuId: number | null;
   children: MenuTreeNode[];
+};
+
+// 예매 활동 로그(보고서) — RESERVATION_HISTORY 한 행. 일반 사용자용 Reservation과 달리
+// userId/insIp가 포함됨(관리자만 보는 값이라 별도 타입으로 분리)
+export type ReservationHistoryLog = {
+  historyId: number;
+  userId: string;
+  seatId: number;
+  roundId: number;
+  reservedStatus: "RESERVED" | "CANCELLED";
+  createdReserved: string;
+  insIp: string;
+  seatRow: string;
+  seatColume: string;
+  grade: string;
+  pTitle: string;
+  roundTime: string;
 };

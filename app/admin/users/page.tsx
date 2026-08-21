@@ -13,6 +13,7 @@ import {
   type AdminUser,
   type Role,
 } from "@/lib/api/admin";
+import { formatRoundTime } from "@/lib/utils/datetime";
 
 type RowChange = { roleId?: number; userStatus?: string };
 
@@ -28,6 +29,7 @@ export default function AdminUsersPage() {
   const [changes, setChanges] = useState<Record<string, RowChange>>({});
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [keyword, setKeyword] = useState("");
 
   useEffect(() => {
     if (isLoading) return;
@@ -38,6 +40,16 @@ export default function AdminUsersPage() {
   }, [isLoading, userSession]);
 
   const changeCount = Object.keys(changes).length;
+
+  const filteredUsers = (() => {
+    const kw = keyword.trim().toLowerCase();
+    if (!kw) return users;
+    return users.filter(u =>
+      u.userId.toLowerCase().includes(kw) ||
+      u.userNm.toLowerCase().includes(kw) ||
+      u.userEmail.toLowerCase().includes(kw)
+    );
+  })();
 
   const handleChange = (userId: string, field: keyof RowChange, value: string | number) => {
     setChanges(prev => ({
@@ -59,23 +71,9 @@ export default function AdminUsersPage() {
     setMsg("");
     try {
       await batchUpdateUsers(changes);
-      // 로컬 상태 반영
-      setUsers(prev =>
-        prev.map(u =>
-          changes[u.userId]
-            ? {
-                ...u,
-                ...(changes[u.userId].roleId !== undefined && {
-                  roleId: changes[u.userId].roleId!,
-                  roleName: roles.find(r => r.roleId === changes[u.userId].roleId)?.roleName ?? u.roleName,
-                }),
-                ...(changes[u.userId].userStatus !== undefined && {
-                  userStatus: changes[u.userId].userStatus!,
-                }),
-              }
-            : u
-        )
-      );
+      // 저장 후 서버에서 다시 조회 — 로컬 값만 낙관적으로 합치면 uptId/uptDe(최종수정자/수정일)처럼
+      // 서버가 계산해서 새로 채워주는 값은 반영이 안 됨(프로그램/메뉴 관리 화면과 동일하게 재조회로 통일)
+      setUsers(await getAdminUsers());
       setChanges({});
       setMsg(`${changeCount}건이 저장되었습니다.`);
     } catch {
@@ -110,6 +108,17 @@ export default function AdminUsersPage() {
         </div>
       }
     >
+      <div className="adminFormRow">
+        <span className="adminLabel">검색</span>
+        <input
+          type="text"
+          className="adminInput"
+          placeholder="아이디, 이름, 이메일로 검색"
+          value={keyword}
+          onChange={e => setKeyword(e.target.value)}
+        />
+      </div>
+
       <div className="adminTableWrap">
         <table className="adminTable">
           <thead>
@@ -119,10 +128,15 @@ export default function AdminUsersPage() {
               <th>이메일</th>
               <th>역할</th>
               <th>상태</th>
+              <th>최종수정자</th>
+              <th>최종수정일</th>
             </tr>
           </thead>
           <tbody>
-            {users.map(user => {
+            {filteredUsers.length === 0 && (
+              <tr><td colSpan={7} className="emptyMsg">검색 결과가 없습니다.</td></tr>
+            )}
+            {filteredUsers.map(user => {
               const isDirty = !!changes[user.userId];
               return (
                 <tr key={user.userId} className={isDirty ? "adminRowDirty" : ""}>
@@ -150,6 +164,8 @@ export default function AdminUsersPage() {
                       <option value="SUSPENDED">정지됨</option>
                     </select>
                   </td>
+                  <td className="adminCellEmail">{user.uptId ?? "-"}</td>
+                  <td className="adminCellEmail">{user.uptDe ? formatRoundTime(user.uptDe) : "-"}</td>
                 </tr>
               );
             })}

@@ -37,6 +37,7 @@ const CARD_STATUS = {
   OPEN: { variant: "open", label: "예매 가능" },
   BEFORE: { variant: "closed", label: "예매 전" },
   SOLDOUT: { variant: "soldout", label: "매진" },
+  CLOSED: { variant: "closed", label: "예매 마감" },
 } as const;
 
 type CardStatus = keyof typeof CARD_STATUS;
@@ -65,11 +66,22 @@ function summarizeRounds(rounds: Round[]): { schedule: string; status: CardStatu
   // 오픈 시각 비교는 서버에서만 계산된다(Server Component라 클라이언트 재렌더가 없어
   // 하이드레이션 불일치 걱정은 없음). 시드의 open_time 은 전부 과거라 경계값 이슈도 없다.
   const now = Date.now();
-  const status: CardStatus = rounds.every((r) => r.roundStatus === "SOLDOUT")
-    ? "SOLDOUT"
-    : rounds.some((r) => new Date(r.openTime.replace(" ", "T")).getTime() <= now)
-      ? "OPEN"
-      : "BEFORE";
+
+  // 공연 시각(roundTime) 자체가 이미 지난 회차는 오픈 시각과 무관하게 예매가 불가능함
+  // (상세 화면의 BookButton과 동일한 기준 — "closed" 상태). 이걸 안 거르면 회차가 전부
+  // 과거인 공연도 "예매 가능"으로 잘못 표시됨(오픈 시각만 보고 판단했었기 때문).
+  const upcoming = rounds.filter(
+    (r) => new Date(r.roundTime.replace(" ", "T")).getTime() > now
+  );
+
+  const status: CardStatus =
+    upcoming.length === 0
+      ? "CLOSED"
+      : upcoming.every((r) => r.roundStatus === "SOLDOUT")
+        ? "SOLDOUT"
+        : upcoming.some((r) => new Date(r.openTime.replace(" ", "T")).getTime() <= now)
+          ? "OPEN"
+          : "BEFORE";
 
   return { schedule, status };
 }
@@ -88,11 +100,14 @@ export default async function EventsPage({
   if (categoryId != null) eventsQuery.set("categoryId", String(categoryId));
   if (keyword) eventsQuery.set("keyword", keyword);
 
+  // 카테고리/공연 목록은 몇 초~몇 분 단위로도 잘 안 바뀌는 데이터라 no-store로 매번 backend까지
+  // 재왕복하지 않고 1분 단위로 재검증 — 홈이 트래픽이 제일 몰리는 페이지라 부하테스트에서 가장 먼저
+  // 무너진 원인이었음(frontend#27, wiki/troubleshooting/loadtest-10000-open-run-cascading-failures.md)
   //카테고리 목록 + events api 호출 (페이지 단위, 카테고리 필터·검색어 포함)
   const [categoriesRes, res] = await Promise.all([
-    fetch(`${BASE_URL}/api/categories`, { cache: "no-store" }),
+    fetch(`${BASE_URL}/api/categories`, { next: { revalidate: 60 } }),
     fetch(`${BASE_URL}/api/events/paged?${eventsQuery.toString()}`, {
-      cache: "no-store",
+      next: { revalidate: 60 },
     }),
   ]);
   // GET /api/events/paged, /api/categories 는 GlobalResponseAdvice가

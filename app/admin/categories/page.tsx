@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getAdminCategories, createCategory, updateCategory, deleteCategory, type Category } from "@/lib/api/admin";
+import { formatRoundTime } from "@/lib/utils/datetime";
 
 type RowChange = { categoryNm?: string; sortOrder?: number; useYn?: string };
 
@@ -21,6 +22,7 @@ export default function AdminCategoriesPage() {
 
   const [newCategoryNm, setNewCategoryNm] = useState("");
   const [adding, setAdding] = useState(false);
+  const [keyword, setKeyword] = useState("");
 
   const load = () => getAdminCategories().then(setCategories);
 
@@ -31,6 +33,11 @@ export default function AdminCategoriesPage() {
   }, [isLoading, userSession]);
 
   const changeCount = Object.keys(changes).length;
+
+  const keywordLower = keyword.trim().toLowerCase();
+  const filteredCategories = keywordLower
+    ? categories.filter((c) => c.categoryNm.toLowerCase().includes(keywordLower))
+    : categories;
 
   // 원래 값으로 되돌아오면 dirty 표시(및 저장 대상)에서 빠지도록 처리
   const handleChange = (categoryId: number, field: keyof RowChange, value: string | number) => {
@@ -157,6 +164,17 @@ export default function AdminCategoriesPage() {
         </div>
       </div>
 
+      <div className="adminFormRow">
+        <span className="adminLabel">검색</span>
+        <input
+          type="text"
+          className="adminInput"
+          placeholder="카테고리명으로 검색"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+        />
+      </div>
+
       <div className="adminTableWrap">
         <table className="adminTable">
           <thead>
@@ -164,13 +182,22 @@ export default function AdminCategoriesPage() {
               <th>카테고리명</th>
               <th>정렬순서</th>
               <th>사용여부</th>
+              <th>최종수정자</th>
+              <th>최종수정일</th>
               <th></th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {categories.map((c, idx) => {
+            {filteredCategories.length === 0 && (
+              <tr><td colSpan={7} className="emptyMsg">검색 결과가 없습니다.</td></tr>
+            )}
+            {filteredCategories.map((c) => {
+              // 순서 이동은 검색으로 가려진 행을 건너뛰면 순서가 꼬일 수 있어, 실제(전체 목록) 인덱스를 기준으로 동작시킴
+              const idx = categories.findIndex((x) => x.categoryId === c.categoryId);
               const isDirty = !!changes[c.categoryId];
+              // 아직 한 번도 수정 안 된 행은 등록자/등록일을 "최종수정" 자리에 대신 보여줌(등록도 최초의 터치로 취급)
+              const lastEdit = c.uptDe ? { uptId: c.uptId, uptDe: c.uptDe } : { uptId: c.insId, uptDe: c.insDe };
               return (
                 <tr key={c.categoryId} className={isDirty ? "adminRowDirty" : ""}>
                   <td>
@@ -200,6 +227,8 @@ export default function AdminCategoriesPage() {
                       <option value="N">미사용</option>
                     </select>
                   </td>
+                  <td className="adminCellEmail">{lastEdit.uptId ?? "-"}</td>
+                  <td className="adminCellEmail">{lastEdit.uptDe ? formatRoundTime(lastEdit.uptDe) : "-"}</td>
                   <td>
                     <button className="btnDanger" onClick={() => handleDelete(c.categoryId)}>삭제</button>
                   </td>
@@ -208,16 +237,16 @@ export default function AdminCategoriesPage() {
                       <button
                         className="btnSecondary"
                         onClick={() => handleMove(idx, "up")}
-                        disabled={idx === 0}
-                        title="위로 이동"
+                        disabled={!!keywordLower || idx === 0}
+                        title={keywordLower ? "검색 중에는 순서를 변경할 수 없습니다" : "위로 이동"}
                       >
                         ▲
                       </button>
                       <button
                         className="btnSecondary"
                         onClick={() => handleMove(idx, "down")}
-                        disabled={idx === categories.length - 1}
-                        title="아래로 이동"
+                        disabled={!!keywordLower || idx === categories.length - 1}
+                        title={keywordLower ? "검색 중에는 순서를 변경할 수 없습니다" : "아래로 이동"}
                       >
                         ▼
                       </button>

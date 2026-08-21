@@ -67,6 +67,31 @@
 
 .roundTime { font-size: var(--font-md); color: var(--text); }
 
+/* 예매 오픈 알림 버튼(OpenAlertToggle) 클릭 시 종 아이콘이 흔들리는 연출 */
+.bellRing {
+  display: inline-block;
+  transform-origin: 50% 0%;
+  animation: bellRing 0.5s ease;
+}
+
+@keyframes bellRing {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-18deg); }
+  40% { transform: rotate(14deg); }
+  60% { transform: rotate(-10deg); }
+  80% { transform: rotate(6deg); }
+}
+
+/* 예매 오픈 알림 신청 완료 상태 — badge.css의 badgeOpen("예매 가능")과 같은 성공 색상 토큰 재사용.
+   .btnSecondary와 같이 걸어서(합친 선택자) button.css의 소스 순서와 무관하게 항상 이기게 함 */
+.btnSecondary.btnAlertSubscribed {
+  background: var(--success-bg);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.btnSecondary.btnAlertSubscribed:hover { background: var(--success-bg); }
+
 /* 캐스팅 목록 — 화면 폭에 맞춰 자동 줄바꿈 */
 .castGrid {
   display: grid;
@@ -339,24 +364,90 @@
   border-bottom-color: var(--accent);
 }
 
-/* 감상평 미구현 안내 — 기능이 붙으면 이 블록은 통째로 지우면 됨 */
-.reviewPlaceholder {
-  border: 1px dashed var(--border-strong);
+.reviewForm {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 40px 24px;
-  text-align: center;
   background: var(--surface);
 }
 
-.reviewPlaceholderTitle {
-  font-size: var(--font-lg);
-  font-weight: 700;
+.starRating { display: flex; gap: 2px; }
+
+.star {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: var(--font-xl);
+  line-height: 1;
+  color: var(--border-strong);
+  cursor: pointer;
+}
+
+.star:disabled { cursor: default; }
+
+.starFilled { color: var(--accent); }
+
+.reviewFormRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+  font-size: var(--font-sm);
   color: var(--text-2);
+}
+
+.reviewFormActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.reviewList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.reviewCard {
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.reviewCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   margin-bottom: var(--space-2);
 }
 
-.reviewPlaceholderDesc {
+.reviewAuthor { font-size: var(--font-md); font-weight: 700; color: var(--text); }
+
+.reviewDate { font-size: var(--font-sm); color: var(--text-3); }
+
+.reviewActions { display: flex; gap: var(--space-2); flex-shrink: 0; }
+
+.reviewContent {
   font-size: var(--font-md);
-  color: var(--text-3);
-  line-height: 1.8;
+  color: var(--text);
+  line-height: 1.7;
+  white-space: pre-wrap;
 }
+
+.reviewSpoilerBtn {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--surface2);
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: var(--font-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.reviewSpoilerBtn:hover { background: var(--surface); }

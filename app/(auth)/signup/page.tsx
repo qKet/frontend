@@ -1,13 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signup } from "@/lib/api/auth"
+import { signup, checkUserId, sendEmailVerificationCode, confirmEmailVerificationCode } from "@/lib/api/auth"
 import Button from "@/components/ui/Button";
 import FormField from "@/components/ui/FormField";
 import Input from "@/components/ui/Input";
 import StatusMessage from "@/components/ui/StatusMessage";
+
+const CODE_TTL_SEC = 300; // 5분 — 백엔드 EmailVerificationServiceImpl의 CODE_TTL과 동일
+// 백엔드 EmailVerificationServiceImpl의 EMAIL_PATTERN과 동일 — 명백히 잘못된 형식은 요청 전에 걸러서
+// 발송 시도 없이 바로 에러를 보여줌(네트워크 왕복 없이 즉시 피드백)
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignupPage() {
   const router = useRouter();
@@ -23,8 +28,101 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // 아이디 중복확인 상태
+  const [idChecked, setIdChecked] = useState(false);
+  const [checkingId, setCheckingId] = useState(false);
+  const [idError, setIdError] = useState("");
 
+  // 이메일 인증 상태
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verifyCode, setVerifyCode] = useState("");
+  const [remainingSec, setRemainingSec] = useState(0);
+  const [emailError, setEmailError] = useState("");
+  const [sendingCode, setSendingCode] = useState(false);
 
+  // QueueModal.tsx의 useRef(interval id) + useEffect cleanup 패턴 재사용
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cancelledRef = useRef(false);
+
+  useEffect(() => {
+    cancelledRef.current = false;
+    return () => {
+      cancelledRef.current = true;
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  const startCountdown = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setRemainingSec(CODE_TTL_SEC);
+    intervalRef.current = setInterval(() => {
+      setRemainingSec((prev) => {
+        if (cancelledRef.current) return prev;
+        if (prev <= 1) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleCheckId = async () => {
+    if (!userId) {
+      setIdError("아이디를 입력하세요.");
+      return;
+    }
+    setCheckingId(true);
+    setIdError("");
+    try {
+      await checkUserId(userId);
+      setIdChecked(true);
+    } catch (e) {
+      setIdChecked(false);
+      setIdError(e instanceof Error ? e.message : "중복확인에 실패했습니다.");
+    } finally {
+      setCheckingId(false);
+    }
+  };
+
+  const handleSendCode = async () => {
+    if (!userEmail) {
+      setEmailError("이메일을 입력하세요.");
+      return;
+    }
+    if (!EMAIL_PATTERN.test(userEmail)) {
+      setEmailError("올바른 이메일 형식이 아닙니다.");
+      return;
+    }
+    setSendingCode(true);
+    setEmailError("");
+    try {
+      await sendEmailVerificationCode(userEmail);
+      setEmailSent(true);
+      setEmailVerified(false);
+      setVerifyCode("");
+      startCountdown();
+    } catch (e) {
+      setEmailError(e instanceof Error ? e.message : "인증번호 발송에 실패했습니다.");
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
+  const handleConfirmCode = async () => {
+    setEmailError("");
+    try {
+      await confirmEmailVerificationCode(userEmail, verifyCode);
+      setEmailVerified(true);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    } catch (e) {
+      setEmailError(e instanceof Error ? e.message : "인증번호가 올바르지 않습니다.");
+    }
+  };
+
+  const formatRemaining = (sec: number) =>
+    `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
 
   const handlSignup = async () => {
     // 모든 필드값 작성했는지 유효성 검사
@@ -39,7 +137,16 @@ export default function SignupPage() {
       return;
     }
 
-    //추후에 ID 중복확인 체킹 넣을지 말지 선택
+    if (!idChecked) {
+      setError("아이디 중복확인을 해주세요.");
+      return;
+    }
+
+    if (!emailVerified) {
+      setError("이메일 인증을 완료해주세요.");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -64,12 +171,28 @@ export default function SignupPage() {
         <p className="authDesc">새 계정을 만들어 공연을 예매하세요.</p>
 
         <FormField label="아이디">
-          <Input
-            placeholder="사용할 아이디"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-          />
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Input
+              placeholder="사용할 아이디"
+              value={userId}
+              onChange={(e) => {
+                setUserId(e.target.value);
+                setIdChecked(false); // 확인 후에도 다시 수정 가능 — 수정하면 확인 상태만 초기화(재확인 필요)
+              }}
+            />
+            <Button
+              variant="secondary"
+              type="button"
+              disabled={checkingId || idChecked}
+              onClick={handleCheckId}
+            >
+              {idChecked ? "확인완료" : checkingId ? "확인 중..." : "중복확인"}
+            </Button>
+          </div>
         </FormField>
+
+        {idChecked && <StatusMessage variant="success">사용 가능한 아이디입니다.</StatusMessage>}
+        {idError && <StatusMessage variant="error">{idError}</StatusMessage>}
 
         <FormField label="이름">
           <Input
@@ -80,13 +203,47 @@ export default function SignupPage() {
         </FormField>
 
         <FormField label="이메일">
-          <Input
-            type="email"
-            placeholder="example@email.com"
-            value={userEmail}
-            onChange={(e) => setUserEmail(e.target.value)}
-          />
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Input
+              type="email"
+              placeholder="example@email.com"
+              value={userEmail}
+              onChange={(e) => {
+                setUserEmail(e.target.value);
+                setEmailVerified(false); // 인증 후에도 다시 수정 가능 — 수정하면 인증 상태 초기화(재인증 필요)
+                setEmailSent(false);
+                // 이전 이메일로 보낸 인증번호의 카운트다운이 남아있으면 새 이메일인데도 "재전송 대기"로
+                // 버튼이 막혀버림 — 이메일이 바뀌는 순간 카운트다운도 같이 초기화
+                if (intervalRef.current) clearInterval(intervalRef.current);
+                setRemainingSec(0);
+              }}
+            />
+            <Button
+              variant="secondary"
+              type="button"
+              disabled={sendingCode || emailVerified || remainingSec > 0}
+              onClick={handleSendCode}
+            >
+              {emailVerified ? "인증완료" : remainingSec > 0 ? "재전송 대기" : emailSent ? "재전송" : "인증번호 발송"}
+            </Button>
+          </div>
         </FormField>
+
+        {emailSent && !emailVerified && (
+          <FormField label="인증번호">
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <Input
+                placeholder="6자리 인증번호"
+                value={verifyCode}
+                onChange={(e) => setVerifyCode(e.target.value)}
+              />
+              <Button variant="secondary" type="button" onClick={handleConfirmCode}>확인</Button>
+              {remainingSec > 0 && <span style={{ fontSize: "var(--font-sm)", whiteSpace: "nowrap" }}>{formatRemaining(remainingSec)}</span>}
+            </div>
+          </FormField>
+        )}
+
+        {emailError && <StatusMessage variant="error">{emailError}</StatusMessage>}
 
         <FormField label="비밀번호">
           <Input

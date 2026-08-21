@@ -15,6 +15,7 @@ import {
   type RoleProgram,
   type Role,
 } from "@/lib/api/admin";
+import { formatRoundTime } from "@/lib/utils/datetime";
 
 type RowChange = { programNm?: string; urlPath?: string; programType?: string; useYn?: string };
 
@@ -25,6 +26,9 @@ export default function AdminProgramsPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [mappings, setMappings] = useState<Set<string>>(new Set());
+  // programId → 그 프로그램의 권한 체크박스 중 가장 최근에 바뀐 것의 수정자/수정일
+  // (그리드 저장은 전체 delete+insert라 매핑이 하나라도 바뀌면 해당 programId의 모든 role 매핑이 같은 시각으로 갱신됨)
+  const [roleProgramMeta, setRoleProgramMeta] = useState<Record<number, { uptId: string | null; uptDe: string | null }>>({});
   const [loading, setLoading] = useState(true);
 
   // programId → 변경된 값
@@ -32,6 +36,7 @@ export default function AdminProgramsPage() {
   const [mappingsDirty, setMappingsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [keyword, setKeyword] = useState("");
 
   const [newProgram, setNewProgram] = useState({ programNm: "", urlPath: "", programType: "MENU" });
   const [adding, setAdding] = useState(false);
@@ -40,7 +45,17 @@ export default function AdminProgramsPage() {
     Promise.all([getPrograms(), getRoles(), getRoleMappings()]).then(([p, r, m]) => {
       setPrograms(p);
       setRoles(r);
-      setMappings(new Set(m.map((x) => `${x.roleId}-${x.programId}`)));
+      setMappings(new Set(m.filter((x) => x.useYn !== "N").map((x) => `${x.roleId}-${x.programId}`)));
+
+      const meta: Record<number, { uptId: string | null; uptDe: string | null }> = {};
+      m.forEach((x) => {
+        if (!x.uptDe) return;
+        const cur = meta[x.programId];
+        if (!cur || !cur.uptDe || x.uptDe > cur.uptDe) {
+          meta[x.programId] = { uptId: x.uptId ?? null, uptDe: x.uptDe };
+        }
+      });
+      setRoleProgramMeta(meta);
     });
 
   useEffect(() => {
@@ -51,6 +66,14 @@ export default function AdminProgramsPage() {
 
   const changeCount = Object.keys(changes).length;
   const dirty = changeCount > 0 || mappingsDirty;
+
+  const filteredPrograms = (() => {
+    const kw = keyword.trim().toLowerCase();
+    if (!kw) return programs;
+    return programs.filter(p =>
+      p.programNm.toLowerCase().includes(kw) || p.urlPath.toLowerCase().includes(kw)
+    );
+  })();
 
   const handleChange = (programId: number, field: keyof RowChange, value: string) => {
     setChanges((prev) => ({ ...prev, [programId]: { ...prev[programId], [field]: value } }));
@@ -185,6 +208,17 @@ export default function AdminProgramsPage() {
         </div>
       </div>
 
+      <div className="adminFormRow">
+        <span className="adminLabel">검색</span>
+        <input
+          type="text"
+          className="adminInput"
+          placeholder="프로그램 이름 또는 URL 경로로 검색"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+        />
+      </div>
+
       <div className="adminTableWrap">
         <table className="adminTable">
           <thead>
@@ -193,6 +227,8 @@ export default function AdminProgramsPage() {
               <th>URL 경로</th>
               <th>타입</th>
               <th>사용여부</th>
+              <th>최종수정자</th>
+              <th>최종수정일</th>
               {roles.map((r) => (
                 <th key={r.roleId} style={{ textAlign: "center" }}>{r.roleName}</th>
               ))}
@@ -200,8 +236,18 @@ export default function AdminProgramsPage() {
             </tr>
           </thead>
           <tbody>
-            {programs.map((p) => {
+            {filteredPrograms.length === 0 && (
+              <tr><td colSpan={7 + roles.length} className="emptyMsg">검색 결과가 없습니다.</td></tr>
+            )}
+            {filteredPrograms.map((p) => {
               const isDirty = !!changes[p.programId];
+              const roleMeta = roleProgramMeta[p.programId];
+              // 아직 한 번도 수정 안 된 행은 등록자/등록일을 "최종수정" 자리에 대신 보여줌(등록도 최초의 터치로 취급)
+              const programOwnEdit = p.uptDe ? { uptId: p.uptId, uptDe: p.uptDe } : { uptId: p.insId, uptDe: p.insDe };
+              const lastEdit =
+                roleMeta?.uptDe && (!programOwnEdit.uptDe || roleMeta.uptDe > programOwnEdit.uptDe)
+                  ? roleMeta
+                  : programOwnEdit;
               return (
                 <tr key={p.programId} className={isDirty ? "adminRowDirty" : ""}>
                   <td>
@@ -240,6 +286,8 @@ export default function AdminProgramsPage() {
                       <option value="N">미사용</option>
                     </select>
                   </td>
+                  <td className="adminCellEmail">{lastEdit.uptId ?? "-"}</td>
+                  <td className="adminCellEmail">{lastEdit.uptDe ? formatRoundTime(lastEdit.uptDe) : "-"}</td>
                   {roles.map((r) => (
                     <td key={r.roleId} style={{ textAlign: "center" }}>
                       <input

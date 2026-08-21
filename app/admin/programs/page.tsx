@@ -36,6 +36,7 @@ export default function AdminProgramsPage() {
   const [mappingsDirty, setMappingsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [keyword, setKeyword] = useState("");
 
   const [newProgram, setNewProgram] = useState({ programNm: "", urlPath: "", programType: "MENU" });
   const [adding, setAdding] = useState(false);
@@ -65,6 +66,14 @@ export default function AdminProgramsPage() {
 
   const changeCount = Object.keys(changes).length;
   const dirty = changeCount > 0 || mappingsDirty;
+
+  const filteredPrograms = (() => {
+    const kw = keyword.trim().toLowerCase();
+    if (!kw) return programs;
+    return programs.filter(p =>
+      p.programNm.toLowerCase().includes(kw) || p.urlPath.toLowerCase().includes(kw)
+    );
+  })();
 
   const handleChange = (programId: number, field: keyof RowChange, value: string) => {
     setChanges((prev) => ({ ...prev, [programId]: { ...prev[programId], [field]: value } }));
@@ -199,6 +208,17 @@ export default function AdminProgramsPage() {
         </div>
       </div>
 
+      <div className="adminFormRow">
+        <span className="adminLabel">검색</span>
+        <input
+          type="text"
+          className="adminInput"
+          placeholder="프로그램 이름 또는 URL 경로로 검색"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+        />
+      </div>
+
       <div className="adminTableWrap">
         <table className="adminTable">
           <thead>
@@ -216,7 +236,10 @@ export default function AdminProgramsPage() {
             </tr>
           </thead>
           <tbody>
-            {programs.map((p) => {
+            {filteredPrograms.length === 0 && (
+              <tr><td colSpan={7 + roles.length} className="emptyMsg">검색 결과가 없습니다.</td></tr>
+            )}
+            {filteredPrograms.map((p) => {
               const isDirty = !!changes[p.programId];
               const roleMeta = roleProgramMeta[p.programId];
               // 아직 한 번도 수정 안 된 행은 등록자/등록일을 "최종수정" 자리에 대신 보여줌(등록도 최초의 터치로 취급)

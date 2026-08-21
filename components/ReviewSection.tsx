@@ -30,7 +30,6 @@ function ReviewForm({
   rounds,
   initialContent = "",
   initialRating = 5,
-  initialSpoiler = false,
   submitLabel,
   onSubmit,
   onCancel,
@@ -38,15 +37,13 @@ function ReviewForm({
   rounds?: ReviewableRound[];
   initialContent?: string;
   initialRating?: number;
-  initialSpoiler?: boolean;
   submitLabel: string;
-  onSubmit: (content: string, rating: number, containsSpoiler: boolean, roundId?: number) => Promise<void>;
+  onSubmit: (content: string, rating: number, roundId?: number) => Promise<void>;
   onCancel?: () => void;
 }) {
   const [roundId, setRoundId] = useState<number | "">(rounds?.[0]?.roundId ?? "");
   const [content, setContent] = useState(initialContent);
   const [rating, setRating] = useState(initialRating);
-  const [spoiler, setSpoiler] = useState(initialSpoiler);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
@@ -60,7 +57,7 @@ function ReviewForm({
     }
     setSubmitting(true);
     try {
-      await onSubmit(content, rating, spoiler, rounds ? Number(roundId) : undefined);
+      await onSubmit(content, rating, rounds ? Number(roundId) : undefined);
     } catch (e) {
       alert(e instanceof Error ? e.message : "처리에 실패했습니다.");
     } finally {
@@ -98,10 +95,7 @@ function ReviewForm({
         />
       </FormField>
 
-      <label className="reviewFormRow">
-        <input type="checkbox" checked={spoiler} onChange={(e) => setSpoiler(e.target.checked)} />
-        스포일러가 포함되어 있어요
-      </label>
+      <p className="reviewFormRow">스포일러 포함 여부는 AI가 자동으로 판별해요.</p>
 
       <div className="reviewFormActions">
         {onCancel && (
@@ -125,7 +119,7 @@ function ReviewCard({
 }: {
   review: Review;
   isMine: boolean;
-  onUpdate: (content: string, rating: number, containsSpoiler: boolean) => Promise<void>;
+  onUpdate: (content: string, rating: number) => Promise<void>;
   onDelete: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -137,11 +131,10 @@ function ReviewCard({
       <ReviewForm
         initialContent={review.content}
         initialRating={review.rating}
-        initialSpoiler={isSpoiler}
         submitLabel="수정 완료"
         onCancel={() => setEditing(false)}
-        onSubmit={async (content, rating, spoiler) => {
-          await onUpdate(content, rating, spoiler);
+        onSubmit={async (content, rating) => {
+          await onUpdate(content, rating);
           setEditing(false);
         }}
       />
@@ -209,15 +202,15 @@ export default function ReviewSection({ performanceId }: Props) {
     .map((r) => r.roundId);
   const availableRounds = reservedRounds.filter((r) => !myReviewedRoundIds.includes(r.roundId));
 
-  const handleWrite = async (content: string, rating: number, containsSpoiler: boolean, roundId?: number) => {
+  const handleWrite = async (content: string, rating: number, roundId?: number) => {
     if (!roundId) return;
-    const created = await writeReview(performanceId, roundId, content, rating, containsSpoiler);
+    const created = await writeReview(performanceId, roundId, content, rating);
     setReviews((prev) => [created, ...prev]);
     setWriting(false);
   };
 
-  const handleUpdate = async (reviewId: number, content: string, rating: number, containsSpoiler: boolean) => {
-    const updated = await updateReview(reviewId, content, rating, containsSpoiler);
+  const handleUpdate = async (reviewId: number, content: string, rating: number) => {
+    const updated = await updateReview(reviewId, content, rating);
     setReviews((prev) => prev.map((r) => (r.reviewId === reviewId ? updated : r)));
   };
 
@@ -262,7 +255,7 @@ export default function ReviewSection({ performanceId }: Props) {
             key={review.reviewId}
             review={review}
             isMine={review.userId === userSession?.userId}
-            onUpdate={(content, rating, spoiler) => handleUpdate(review.reviewId, content, rating, spoiler)}
+            onUpdate={(content, rating) => handleUpdate(review.reviewId, content, rating)}
             onDelete={() => handleDelete(review.reviewId)}
           />
         ))}

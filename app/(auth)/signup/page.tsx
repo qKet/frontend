@@ -166,7 +166,7 @@ export default function SignupPage() {
   return (
     <div className="authWrap">
       <div className="authBox">
-        <p className="authLogo">TicketBox</p>
+        <p className="authLogo">Q-Ket</p>
         <h1 className="authTitle">회원가입</h1>
         <p className="authDesc">새 계정을 만들어 공연을 예매하세요.</p>
 

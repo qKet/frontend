@@ -45,59 +45,58 @@ export async function getReviewableRounds(performanceId: number): Promise<Review
 // ============================================================
 // POST /api/events/{performanceId}/reviews
 // 백엔드: ReviewController.java → write()  (로그인 필요, 그 회차 예매자만 가능, 회차당 1개만)
-// 기능: 감상평 작성
+// 기능: 감상평 작성. 스포일러 포함 여부는 사용자가 체크하지 않고 백엔드가 AI(AI01_SPOIL01)로
+//      본문을 판별해서 응답의 containsSpoiler에 채워준다
 //
 // 사용 예시:
 //   import { writeReview } from "@/lib/api/reviews";
 //
 //   try {
-//     const review = await writeReview(performanceId, roundId, content, rating, containsSpoiler);
+//     const review = await writeReview(performanceId, roundId, content, rating);
 //     setReviews(prev => [review, ...prev]);
 //   } catch (e: any) {
 //     alert(e.message); // 예매 이력 없음(REV003), 이미 작성함(REV002) 등
 //   }
 //
 // 요청 JSON (프론트 → 백엔드, body):
-//   { "roundId": 10, "content": "정말 좋았어요", "rating": 5, "containsSpoiler": false }
+//   { "roundId": 10, "content": "정말 좋았어요", "rating": 5 }
 //
-// 응답 JSON (Review): { "reviewId": 1, "performanceId": 1, "roundId": 10, "userId": "testuser01", ... }
+// 응답 JSON (Review): { "reviewId": 1, "performanceId": 1, "roundId": 10, "userId": "testuser01", "containsSpoiler": "N", ... }
 // ============================================================
 export async function writeReview(
   performanceId: number,
   roundId: number,
   content: string,
-  rating: number,
-  containsSpoiler: boolean
+  rating: number
 ): Promise<Review> {
   return apiFetch<Review>(`/events/${performanceId}/reviews`, {
     method: "POST",
-    body: { roundId, content, rating, containsSpoiler },
+    body: { roundId, content, rating },
   });
 }
 
 // ============================================================
 // PUT /api/reviews/{reviewId}
 // 백엔드: ReviewController.java → update()  (로그인 필요, 본인 감상평만)
-// 기능: 감상평 수정
+// 기능: 감상평 수정. 스포일러 여부는 수정된 본문을 기준으로 AI가 다시 판별한다
 //
 // 사용 예시:
-//   const updated = await updateReview(reviewId, content, rating, containsSpoiler);
+//   const updated = await updateReview(reviewId, content, rating);
 //   setReviews(prev => prev.map(r => r.reviewId === reviewId ? updated : r));
 //
 // 요청 JSON (프론트 → 백엔드, body):
-//   { "content": "수정된 내용", "rating": 4, "containsSpoiler": true }
+//   { "content": "수정된 내용", "rating": 4 }
 //
 // 응답 JSON (Review)
 // ============================================================
 export async function updateReview(
   reviewId: number,
   content: string,
-  rating: number,
-  containsSpoiler: boolean
+  rating: number
 ): Promise<Review> {
   return apiFetch<Review>(`/reviews/${reviewId}`, {
     method: "PUT",
-    body: { content, rating, containsSpoiler },
+    body: { content, rating },
   });
 }
 

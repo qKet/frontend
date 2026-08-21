@@ -29,6 +29,7 @@ export default function AdminUsersPage() {
   const [changes, setChanges] = useState<Record<string, RowChange>>({});
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [keyword, setKeyword] = useState("");
 
   useEffect(() => {
     if (isLoading) return;
@@ -39,6 +40,16 @@ export default function AdminUsersPage() {
   }, [isLoading, userSession]);
 
   const changeCount = Object.keys(changes).length;
+
+  const filteredUsers = (() => {
+    const kw = keyword.trim().toLowerCase();
+    if (!kw) return users;
+    return users.filter(u =>
+      u.userId.toLowerCase().includes(kw) ||
+      u.userNm.toLowerCase().includes(kw) ||
+      u.userEmail.toLowerCase().includes(kw)
+    );
+  })();
 
   const handleChange = (userId: string, field: keyof RowChange, value: string | number) => {
     setChanges(prev => ({
@@ -97,6 +108,17 @@ export default function AdminUsersPage() {
         </div>
       }
     >
+      <div className="adminFormRow">
+        <span className="adminLabel">검색</span>
+        <input
+          type="text"
+          className="adminInput"
+          placeholder="아이디, 이름, 이메일로 검색"
+          value={keyword}
+          onChange={e => setKeyword(e.target.value)}
+        />
+      </div>
+
       <div className="adminTableWrap">
         <table className="adminTable">
           <thead>
@@ -111,7 +133,10 @@ export default function AdminUsersPage() {
             </tr>
           </thead>
           <tbody>
-            {users.map(user => {
+            {filteredUsers.length === 0 && (
+              <tr><td colSpan={7} className="emptyMsg">검색 결과가 없습니다.</td></tr>
+            )}
+            {filteredUsers.map(user => {
               const isDirty = !!changes[user.userId];
               return (
                 <tr key={user.userId} className={isDirty ? "adminRowDirty" : ""}>

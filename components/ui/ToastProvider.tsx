@@ -24,6 +24,13 @@
 // 작게 렌더링함(2026-08-21) — 예: BookButton의 "예매 오픈 전입니다\n현재 시각: ...\n오픈 시각: ..."
 // 에서 정작 중요한 첫 줄이 시간 정보에 묻혀 안 보인다는 피드백이 있었음. 줄바꿈이 없는
 // 한 줄짜리 메시지는 기존처럼 그대로 렌더링됨(변화 없음).
+//
+// 스팸 방지(2026-08-21): 버튼을 연타하면(예: 로그인 안 된 상태에서 예매하기를 계속 누름) 예전엔
+// 누른 횟수만큼 토스트가 쌓였음. alert()로 돌아가지 않기 위해(확인 버튼으로 막는 방식은 원래
+// 없애려던 블로킹 UX가 다시 생기는 것) "제한을 두는" 쪽으로 해결함 — 같은 메시지가 이미 떠 있으면
+// 새로 쌓지 않고 그 토스트의 노출 타이머만 다시 3.5초로 늘려서 계속 보이게 하고(showToast 내부
+// dedupe), 그것과 별개로 화면에 동시에 떠 있는 토스트 개수도 MAX_VISIBLE로 제한해서 서로 다른
+// 메시지를 연타해도 화면이 도배되지 않게 함.
 
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 
@@ -63,12 +70,26 @@ const DEFAULT_DURATION_MS = 3500;
 // 끝나기 전에 DOM에서 사라져서 뚝 끊기는 것처럼 보임.
 const EXIT_ANIM_MS = 200;
 
+// 동시에 떠 있을 수 있는 최대 개수 — 넘으면 가장 오래된 것부터 즉시 내려서 화면이 도배되지 않게 함
+const MAX_VISIBLE = 3;
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const idRef = useRef(0);
+  // 토스트별 "사라지기" 타이머 id — 같은 메시지가 다시 뜨면 이걸로 기존 타이머를 지우고 다시 걺
+  const timersRef = useRef<Record<number, number>>({});
+
+  const clearTimer = (id: number) => {
+    const t = timersRef.current[id];
+    if (t) {
+      window.clearTimeout(t);
+      delete timersRef.current[id];
+    }
+  };
 
   // 완전히 제거하기 전에 leaving 플래그만 켜서 exit 애니메이션(toastOut)을 재생시킴
   const startLeave = useCallback((id: number) => {
+    clearTimer(id);
     setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, leaving: true } : t)));
     window.setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -77,9 +98,26 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const show = useCallback(
     (message: string, variant: ToastVariant, durationMs = DEFAULT_DURATION_MS) => {
-      const id = ++idRef.current;
-      setToasts((prev) => [...prev, { id, message, variant, leaving: false }]);
-      window.setTimeout(() => startLeave(id), durationMs);
+      setToasts((prev) => {
+        // 이미 같은 메시지가 떠 있으면 새로 쌓지 않고 그 토스트의 타이머만 갱신(연타 방지)
+        const existing = prev.find((t) => t.message === message && t.variant === variant && !t.leaving);
+        if (existing) {
+          clearTimer(existing.id);
+          timersRef.current[existing.id] = window.setTimeout(() => startLeave(existing.id), durationMs);
+          return prev;
+        }
+
+        const id = ++idRef.current;
+        timersRef.current[id] = window.setTimeout(() => startLeave(id), durationMs);
+
+        // 동시 노출 개수 제한 — 넘치는 가장 오래된 토스트는 바로 제거(그 토스트의 타이머도 정리)
+        const next = [...prev, { id, message, variant, leaving: false }];
+        if (next.length > MAX_VISIBLE) {
+          const overflow = next.splice(0, next.length - MAX_VISIBLE);
+          overflow.forEach((t) => clearTimer(t.id));
+        }
+        return next;
+      });
     },
     [startLeave]
   );

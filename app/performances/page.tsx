@@ -33,8 +33,14 @@ const toInputDatetime = (v: string) => {
   return v.replace(" ", "T").substring(0, 16);
 };
 
-const isLocked = (perf: Performance) =>
-  perf.rounds?.some(r => new Date(r.openTime) <= new Date()) ?? false;
+// 예매가 "오픈"됐다고(openTime <= now) 무조건 잠그면, 공연 자체가 완전히 끝난(모든 회차의
+// roundTime도 이미 지난) 옛날 공연까지 영원히 삭제가 안 되는 버그가 있었음(2026-08-21). 실제로
+// 막아야 하는 건 "지금 활성 예매가 있을 수 있는 회차"뿐이라, openTime은 지났지만 roundTime은
+// 아직 안 지난(=예매 오픈됐고 공연도 아직 안 끝난) 회차가 있을 때만 잠그도록 조건을 좁힘.
+const isLocked = (perf: Performance) => {
+  const now = new Date();
+  return perf.rounds?.some(r => new Date(r.openTime) <= now && new Date(r.roundTime) > now) ?? false;
+};
 
 // 홈(app/page.tsx)이 60초 캐시(next: { revalidate: 60 })를 쓰기 때문에, 여기서 공연/회차를
 // 수정·삭제해도 최악의 경우 60초 넘게 홈에 반영이 안 될 수 있음. 변경 성공 직후 이걸 호출해서
@@ -79,6 +85,12 @@ export default function AdminPerformancesPage() {
   // 회차 추가 (수정 모달 내)
   const [newRound, setNewRound] = useState({ roundTime: "", openTime: "" });
   const [addingRound, setAddingRound] = useState(false);
+
+  // 삭제 중인 항목 id — confirm() 모달이 연타를 대부분 막아주긴 하지만(모달이 떠 있는 동안은
+  // 뒤 버튼이 안 눌림), 확인을 누른 "이후" 요청이 끝나기 전까지의 아주 짧은 틈은 못 막아서
+  // 명시적으로 한 번 더 막아둠(2026-08-21, 서버에 중복 요청 안 가게).
+  const [deletingPerfId, setDeletingPerfId] = useState<number | null>(null);
+  const [deletingRoundId, setDeletingRoundId] = useState<number | null>(null);
 
   const editTitleRef = useRef<HTMLInputElement>(null);
 
@@ -195,7 +207,9 @@ export default function AdminPerformancesPage() {
 
   const handleDeleteRound = async (roundId: number) => {
     if (!editingPerf) return;
+    if (deletingRoundId !== null) return; // 이미 삭제 요청이 진행 중이면 새 클릭 무시
     if (!(await confirm("이 회차를 삭제하시겠습니까?", { danger: true }))) return;
+    setDeletingRoundId(roundId);
     try {
       await deleteRound(editingPerf.performanceId, roundId);
       const updated = { ...editingPerf, rounds: editingPerf.rounds.filter(r => r.roundId !== roundId) };
@@ -204,6 +218,8 @@ export default function AdminPerformancesPage() {
       revalidateHome();
     } catch (e: any) {
       setEditMsg({ text: e?.message ?? "회차 삭제에 실패했습니다.", ok: false });
+    } finally {
+      setDeletingRoundId(null);
     }
   };
 
@@ -238,13 +254,17 @@ export default function AdminPerformancesPage() {
 
   const handleDeletePerformance = async (perf: Performance) => {
     if (isLocked(perf)) return;
+    if (deletingPerfId !== null) return; // 이미 삭제 요청이 진행 중이면 새 클릭 무시
     if (!(await confirm(`"${perf.pTitle}" 공연을 삭제하시겠습니까?`, { danger: true }))) return;
+    setDeletingPerfId(perf.performanceId);
     try {
       await deletePerformance(perf.performanceId);
       setPerformances(prev => prev.filter(p => p.performanceId !== perf.performanceId));
       revalidateHome();
     } catch (e: any) {
       toast.error(e?.message ?? "삭제에 실패했습니다.");
+    } finally {
+      setDeletingPerfId(null);
     }
   };
 
@@ -339,10 +359,10 @@ export default function AdminPerformancesPage() {
                         <Button
                           variant="danger"
                           onClick={() => handleDeletePerformance(perf)}
-                          disabled={locked}
+                          disabled={locked || deletingPerfId !== null}
                           title={locked ? "예매 오픈된 회차가 있어 삭제할 수 없습니다." : ""}
                         >
-                          삭제
+                          {deletingPerfId === perf.performanceId ? "삭제 중..." : "삭제"}
                         </Button>
                       </div>
                     </td>
@@ -440,6 +460,12 @@ export default function AdminPerformancesPage() {
                 )}
                 {(editingPerf.rounds ?? []).map((r, idx) => {
                   const roundLocked = new Date(r.openTime) <= new Date();
+                  // 수정(시간 변경)은 "오픈됐으면" 계속 막아야 하지만(이미 예매한 사람들 시간이 바뀌면
+                  // 안 되니까), 삭제는 그와 달리 "공연 자체가 아직 안 끝났을 때"만 막으면 됨 — 이미
+                  // 공연 시각(roundTime)까지 지난 회차는 삭제해도 아무 문제 없는데 예전엔 openTime만
+                  // 보고 영원히 잠가서 지난 회차를 못 지우는 버그가 있었음(2026-08-21).
+                  const roundEnded = new Date(r.roundTime) <= new Date();
+                  const roundDeleteLocked = roundLocked && !roundEnded;
                   return (
                     <div key={r.roundId} className="adminRoundCard">
                       <div className="adminRoundCardHeader">
@@ -449,10 +475,10 @@ export default function AdminPerformancesPage() {
                           variant="danger"
                           style={{ marginLeft: "auto", padding: "var(--space-1) var(--space-2-5)", fontSize: "var(--font-base)" }}
                           onClick={() => handleDeleteRound(r.roundId)}
-                          disabled={roundLocked}
-                          title={roundLocked ? "오픈된 회차는 삭제할 수 없습니다." : ""}
+                          disabled={roundDeleteLocked || deletingRoundId !== null}
+                          title={roundDeleteLocked ? "오픈된 회차는 삭제할 수 없습니다." : ""}
                         >
-                          삭제
+                          {deletingRoundId === r.roundId ? "삭제 중..." : "삭제"}
                         </Button>
                       </div>
                       <div className="adminRoundCardBody">

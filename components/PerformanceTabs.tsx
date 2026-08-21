@@ -7,6 +7,7 @@
 
 import { useState } from "react";
 import type { PerformanceCast } from "@/lib/data/types";
+import ReviewSection from "@/components/ReviewSection";
 
 // 회차별 캐스팅 묶음. roundLabel 은 서버에서 formatRoundTime 으로 미리 만들어서 넘긴다
 // (날짜 포맷 로직을 서버/클라이언트 양쪽에 두지 않기 위함)
@@ -17,6 +18,7 @@ export type RoundCastGroup = {
 };
 
 type Props = {
+  performanceId: number;
   commonCasts: PerformanceCast[];
   roundCasts: RoundCastGroup[];
 };
@@ -37,7 +39,7 @@ function CastList({ casts }: { casts: PerformanceCast[] }) {
   );
 }
 
-export default function PerformanceTabs({ commonCasts, roundCasts }: Props) {
+export default function PerformanceTabs({ performanceId, commonCasts, roundCasts }: Props) {
   const [tab, setTab] = useState<TabKey>("cast");
 
   const hasAnyCast = commonCasts.length > 0 || roundCasts.length > 0;
@@ -90,37 +92,7 @@ export default function PerformanceTabs({ commonCasts, roundCasts }: Props) {
 
       {tab === "review" && (
         <div role="tabpanel">
-          {/* ============================================================
-              [TODO-REV01] 공연 감상평 — 아직 미구현 (담당자 미정)
-              이 자리에 "감상평 목록 + 작성 폼"이 들어갑니다.
-
-              관련 요구사항: REV01_REVIEW01~04, AI01_SPOIL01(스포일러 검열)
-
-              API (project_design/Qket_3차_API명세서.xlsx 기준):
-                GET    /api/events/{performanceId}/reviews   감상평 목록 조회   (공개)
-                POST   /api/events/{performanceId}/reviews   감상평 작성       (로그인)
-                PUT    /api/reviews/{reviewId}               감상평 수정       (본인만)
-                DELETE /api/reviews/{reviewId}               감상평 삭제       (본인만)
-
-              DB: REVIEWS 테이블은 아직 schema.sql 에 없습니다.
-                  PER02(공연 상세/달력) 기능만 먼저 올리기로 해서 이번 스키마에서 제외됐고,
-                  감상평 개발을 시작할 때 project_design/Qket_3차_스키마설계_초안.md 의
-                  REVIEWS 정의를 schema.sql 에 추가해야 합니다.
-
-              구현 시 주의:
-                · 삭제는 물리삭제가 아니라 use_yn='N' 소프트 삭제 (프로젝트 관례)
-                · contains_spoiler='Y' 인 감상평은 본문을 가리고,
-                  사용자가 눌러서 펼치는 UI가 필요합니다
-                · 감상평 작성은 "예매자만" 가능하도록 결정됨 → 서버에서 예매 이력 확인 필요
-             ============================================================ */}
-          <div className="reviewPlaceholder">
-            <p className="reviewPlaceholderTitle">감상평 기능 준비 중</p>
-            <p className="reviewPlaceholderDesc">
-              공연 감상평(REV01)은 아직 개발 전입니다.
-              <br />
-              이 영역에 감상평 목록과 작성 폼이 들어갑니다.
-            </p>
-          </div>
+          <ReviewSection performanceId={performanceId} />
         </div>
       )}
     </section>

@@ -145,6 +145,9 @@ function LoginForm() {
         <p className="authHelper">
           계정이 없으신가요? <Link href="/signup">회원가입</Link>
         </p>
+        <p className="authHelper">
+          <Link href="/find-password">비밀번호를 잊으셨나요?</Link>
+        </p>
       </div>
     </div>
   );

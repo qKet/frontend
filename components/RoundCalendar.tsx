@@ -300,6 +300,7 @@ export default function RoundCalendar({ performanceId, rounds, title, location, 
                     <OpenAlertToggle roundId={round.roundId} openTime={round.openTime} />
                     <BookButton
                       roundId={round.roundId}
+                      performanceId={performanceId}
                       roundTime={round.roundTime}
                       openTime={round.openTime}
                       title={title}

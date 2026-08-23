@@ -199,6 +199,59 @@
   margin-bottom: 16px;
 }
 
+/* 좌석 선택 제한 시간(대기열 입장 자격 잔여 시간) — 2026-08-21 추가.
+   백엔드 ACTIVE_TTL(10분)이 지나면 예매가 거부되는데 그전엔 사용자가 알 방법이 없었음.
+   3분 이하 주황, 1분 이하 빨강으로 단계적으로 강조. */
+.seatTimer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface2);
+}
+
+.seatTimerLabel {
+  font-size: var(--font-sm);
+  color: var(--text-2);
+}
+
+.seatTimerValue {
+  font-size: var(--font-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums; /* 숫자 폭 고정 — 매초 바뀌어도 자리가 안 흔들림 */
+  color: var(--text);
+}
+
+.seatTimerWarn {
+  border-color: rgba(251, 191, 36, 0.5);
+  background: var(--warning-bg);
+}
+
+.seatTimerWarn .seatTimerValue,
+.seatTimerWarn .seatTimerLabel {
+  color: var(--warning);
+}
+
+.seatTimerDanger {
+  border-color: rgba(248, 113, 113, 0.6);
+  background: var(--error-bg);
+  animation: seatTimerPulse 1s ease-in-out infinite;
+}
+
+.seatTimerDanger .seatTimerValue,
+.seatTimerDanger .seatTimerLabel {
+  color: var(--error);
+}
+
+@keyframes seatTimerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 .seatPanelEmpty {
   font-size: 13px;
   color: var(--text-3);

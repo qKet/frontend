@@ -19,7 +19,13 @@ import type { Seat } from "../data/types";
 //       "grade": "VIP", "status": "AVAILABLE" }
 //   ]
 //   status 는 "AVAILABLE" | "LOCKED" | "RESERVED" 중 하나
+//
+// 2026-08-21: queueToken이 필수가 됨. 백엔드(SeatController)가 로그인 여부와 대기열 통과 여부
+// (QueueService.canEnter)를 검증하도록 바뀌었기 때문 — 대기열을 안 거치고 /seats/{roundId}로
+// 직접 들어오면 403을 받는다. 대기 자격(10분)이 만료된 뒤에도 마찬가지로 403이므로,
+// 호출부는 403을 "만료"로 해석해서 안내 후 공연 상세로 돌려보내야 함.
 // ============================================================
-export async function getSeats(roundId: number): Promise<Seat[]> {
-  return apiFetch<Seat[]>(`/schedules/${roundId}/seats`);
+export async function getSeats(roundId: number, queueToken?: string): Promise<Seat[]> {
+  const query = queueToken ? `?queueToken=${encodeURIComponent(queueToken)}` : "";
+  return apiFetch<Seat[]>(`/schedules/${roundId}/seats${query}`);
 }

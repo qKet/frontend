@@ -11,6 +11,9 @@ import { useToast } from "@/components/ui/ToastProvider";
 
 type Props = {
   roundId: number;
+  // 좌석 화면에서 대기 시간이 만료됐을 때 돌아갈 공연 상세 주소를 만들기 위해 함께 넘김(2026-08-21).
+  // roundId만으로는 어느 공연의 회차인지 프론트가 알 수 없어서 QueueModal → 좌석 화면까지 그대로 전달함.
+  performanceId: number;
   openTime: string;
   roundTime: string;
   title: string;
@@ -26,7 +29,7 @@ type Props = {
 
 type ButtonState = "Before" | "pending" | "open" | "closed";
 
-export default function BookButton({ roundId, openTime, roundTime, title, location, posterUrl }: Props) {
+export default function BookButton({ roundId, performanceId, openTime, roundTime, title, location, posterUrl }: Props) {
   const router = useRouter();
   const { userSession } = useAuth();
   const toast = useToast();
@@ -127,6 +130,7 @@ if (now >= round) {
       {showQueue && (
         <QueueModal
           scheduleId={roundId}
+          performanceId={performanceId}
           title={title}
           location={location}
           posterUrl={posterUrl}

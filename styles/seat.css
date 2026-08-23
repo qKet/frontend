@@ -201,14 +201,15 @@
 
 /* 좌석 선택 제한 시간(대기열 입장 자격 잔여 시간) — 2026-08-21 추가.
    백엔드 ACTIVE_TTL(10분)이 지나면 예매가 거부되는데 그전엔 사용자가 알 방법이 없었음.
+   범례(.seatLegend) 줄의 오른쪽 끝에 배치 — margin-left:auto로 밀어냄. 좌석을 고르는 동안
+   시선이 배치도에 머무르므로 우측 패널보다 여기가 눈에 잘 들어옴.
    3분 이하 주황, 1분 이하 빨강으로 단계적으로 강조. */
 .seatTimer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-2);
-  padding: 10px 12px;
-  margin-bottom: 16px;
+  margin-left: auto;
+  padding: 6px 12px;
   border-radius: 8px;
   border: 1px solid var(--border-strong);
   background: var(--surface2);

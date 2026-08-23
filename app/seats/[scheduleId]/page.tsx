@@ -55,22 +55,38 @@ export default function SeatsPage() {
   // 이게 없으면 토스트가 여러 번 뜨고 라우팅도 중복으로 걸린다.
   const expiredRef = useRef(false);
 
-  // 대기 시간이 끝났거나 자격을 잃었을 때: 안내 후 원래 공연 상세로 돌려보냄.
-  // performanceId가 없는(옛 링크로 직접 들어온) 경우엔 홈으로 보냄.
-  const handleExpired = () => {
+  // 좌석을 한 번이라도 정상적으로 불러온 적이 있는지 — 안내 문구를 고르는 기준.
+  // 백엔드(SeatController)는 "토큰 없음 / 잘못된 토큰 / 만료" 세 경우 모두 똑같이 403을 주기 때문에
+  // 응답만으로는 구분할 수 없음. 대신 "처음부터 실패했는가"로 나누면 실질적으로 구분됨(2026-08-21):
+  //   처음부터 실패      → 대기열을 안 거치고 URL로 직접 들어온 경우
+  //   되다가 나중에 실패 → 좌석 고르는 사이 입장 자격(10분)이 만료된 경우
+  const enteredOkRef = useRef(false);
+
+  // 좌석 화면을 더 진행할 수 없을 때: 이유에 맞는 안내 후 원래 공연 상세로 돌려보냄.
+  // performanceId가 없는(대기열을 안 거쳐 URL로 직접 들어온) 경우엔 홈으로 보냄.
+  const leaveSeatPage = () => {
     if (expiredRef.current) return;
     expiredRef.current = true;
-    toast.error("대기 시간이 만료되었습니다.\n다시 예매를 시도해주세요.", 5000);
+
+    if (enteredOkRef.current) {
+      toast.error("대기 시간이 만료되었습니다.\n다시 예매를 시도해주세요.", 5000);
+    } else {
+      toast.error("대기열을 통해 예매를 진행해주세요.", 5000);
+    }
+
     router.replace(performanceId ? `/events/${performanceId}` : "/");
   };
 
   useEffect(() => {
     getSeats(Number(scheduleId), queueToken)
-      .then(setSeats)
+      .then(fresh => {
+        enteredOkRef.current = true;
+        setSeats(fresh);
+      })
       .catch(() => {
         // 대기열을 안 거쳤거나(403) 자격이 만료된 경우 — 빈 좌석표를 보여주는 대신 되돌려보냄
         setSeats([]);
-        handleExpired();
+        leaveSeatPage();
       })
       .finally(() => setLoading(false));
   }, [scheduleId]);
@@ -82,7 +98,7 @@ export default function SeatsPage() {
     getQueueStatus(queueToken)
       .then(status => {
         if (status.status !== "ENTERED") {
-          handleExpired();
+          leaveSeatPage();
           return;
         }
         setRemainingSec(status.remainingSeconds);
@@ -94,7 +110,7 @@ export default function SeatsPage() {
   useEffect(() => {
     if (remainingSec === null) return;
     if (remainingSec <= 0) {
-      handleExpired();
+      leaveSeatPage();
       return;
     }
     const id = setTimeout(() => setRemainingSec(s => (s === null ? null : s - 1)), 1000);
@@ -116,7 +132,7 @@ export default function SeatsPage() {
         })
         .catch(() => {
           // 폴링 중 403 = 자격 만료. 좌석표를 비우는 대신 안내하고 되돌려보냄
-          handleExpired();
+          leaveSeatPage();
         });
     }, 3000);
     return () => clearInterval(id);
@@ -242,6 +258,27 @@ export default function SeatsPage() {
                   <div className="seatLegendDot" style={{ background: "var(--border-strong)" }} />
                   <span>예매완료</span>
                 </div>
+
+                {/* 좌석 선택 제한 시간 — 범례 줄 오른쪽 끝(styles/seat.css의 margin-left:auto)에 붙임.
+                    좌석을 고르는 동안 시선이 배치도에 머무르므로, 우측 "예매 정보" 패널보다 여기가
+                    눈에 잘 들어옴(2026-08-21). 3분 이하 주황, 1분 이하 빨강으로 단계적으로 강조. */}
+                {remainingSec !== null && (
+                  <div
+                    className={
+                      remainingSec <= 60
+                        ? "seatTimer seatTimerDanger"
+                        : remainingSec <= 180
+                          ? "seatTimer seatTimerWarn"
+                          : "seatTimer"
+                    }
+                  >
+                    <span className="seatTimerLabel">남은 시간</span>
+                    <span className="seatTimerValue">
+                      {String(Math.floor(remainingSec / 60)).padStart(2, "0")}:
+                      {String(remainingSec % 60).padStart(2, "0")}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* 좌석 그리드 — 각 구역을 좌/중앙/우 3개 블록으로 나누고 양옆 블록을 무대 쪽으로
@@ -312,25 +349,6 @@ export default function SeatsPage() {
             {/* 선택 정보 패널 */}
             <div className="seatPanel">
               <p className="seatPanelTitle">예매 정보</p>
-
-              {/* 좌석 선택 제한 시간 — 3분 이하 주황, 1분 이하 빨강으로 강조(styles/seat.css) */}
-              {remainingSec !== null && (
-                <div
-                  className={
-                    remainingSec <= 60
-                      ? "seatTimer seatTimerDanger"
-                      : remainingSec <= 180
-                        ? "seatTimer seatTimerWarn"
-                        : "seatTimer"
-                  }
-                >
-                  <span className="seatTimerLabel">남은 시간</span>
-                  <span className="seatTimerValue">
-                    {String(Math.floor(remainingSec / 60)).padStart(2, "0")}:
-                    {String(remainingSec % 60).padStart(2, "0")}
-                  </span>
-                </div>
-              )}
 
               {!selected ? (
                 <p className="seatPanelEmpty">좌석을 선택하세요</p>

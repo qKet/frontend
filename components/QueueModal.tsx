@@ -19,13 +19,15 @@ import StatusMessage from "@/components/ui/StatusMessage";
 
 type Props = {
   scheduleId: number;
+  // 좌석 화면이 "대기 시간 만료 시 공연 상세로 복귀"할 때 쓰는 값 — BookButton에서 그대로 받아 넘김(2026-08-21)
+  performanceId: number;
   title: string;
   location: string;
   posterUrl?: string;
   onClose: () => void;
 };
 
-export default function QueueModal({ scheduleId, title, location, posterUrl, onClose }: Props) {
+export default function QueueModal({ scheduleId, performanceId, title, location, posterUrl, onClose }: Props) {
   const router = useRouter();
 
   const [status, setStatus] = useState<QueueStatus | null>(null);
@@ -60,7 +62,12 @@ export default function QueueModal({ scheduleId, title, location, posterUrl, onC
           // 좌석 선택 화면에서 "뒤로가기"를 눌러도 대기열로 돌아가서 자동 재입장되는 문제가 안 생김
           // pTitle/pLocation/posterUrl 은 여기서 API로 다시 조회하지 않고 그대로 실어 보냄 —
           // 좌석 화면과 결제 화면 모두 이 값들을 표시용으로만 쓰고 roundId로 이미 확정된 공연이라 재검증 불필요
-          const forwardParams = new URLSearchParams({ queueToken: token, pTitle: title, pLocation: location });
+          const forwardParams = new URLSearchParams({
+            queueToken: token,
+            performanceId: String(performanceId),
+            pTitle: title,
+            pLocation: location,
+          });
           if (posterUrl) forwardParams.set("posterUrl", posterUrl);
           router.replace(`/seats/${scheduleId}?${forwardParams.toString()}`);
         }, 1500);

@@ -11,14 +11,16 @@
 // 공연장 좌석 배치도를 그리드로 그려서 보여주고 VIP/R/S 등급별 색상을 다르게 표시
 // 좌석 선점 기능이 들어갈 화면
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import type { Seat } from "@/lib/data/types";
 import { getSeats } from "@/lib/api/seats"
+import { getQueueStatus } from "@/lib/api/queues";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import PageHeader from "@/components/ui/PageHeader";
 import StatusMessage from "@/components/ui/StatusMessage";
+import { useToast } from "@/components/ui/ToastProvider";
 import { GRADE_PRICE, GRADE_LABEL } from "@/lib/constants/pricing";
 
 export default function SeatsPage() {
@@ -31,7 +33,9 @@ export default function SeatsPage() {
   const pTitle = searchParams.get("pTitle") ?? "";
   const pLocation = searchParams.get("pLocation") ?? "";
   const posterUrl = searchParams.get("posterUrl") ?? "";
+  const performanceId = searchParams.get("performanceId") ?? "";
   const router = useRouter();
+  const toast = useToast();
 
   // 좌석 목록
   const [seats, setSeats] = useState<Seat[]>([]);
@@ -42,17 +46,81 @@ export default function SeatsPage() {
   // UI 상태
   const [loading, setLoading] = useState(true);
 
+  // 대기열 입장 자격의 남은 시간(초). null이면 아직 조회 전.
+  // 백엔드 ACTIVE_TTL(10분)이 지나면 좌석 조회/예약이 403으로 거부되는데, 그전엔 프론트가
+  // 이 시간을 알 방법이 없어서 사용자가 이유도 모른 채 튕겼음(2026-08-21).
+  const [remainingSec, setRemainingSec] = useState<number | null>(null);
+
+  // 만료 처리를 한 번만 실행하기 위한 가드 — 폴링과 카운트다운 양쪽에서 만료를 감지할 수 있어서,
+  // 이게 없으면 토스트가 여러 번 뜨고 라우팅도 중복으로 걸린다.
+  const expiredRef = useRef(false);
+
+  // 좌석을 한 번이라도 정상적으로 불러온 적이 있는지 — 안내 문구를 고르는 기준.
+  // 백엔드(SeatController)는 "토큰 없음 / 잘못된 토큰 / 만료" 세 경우 모두 똑같이 403을 주기 때문에
+  // 응답만으로는 구분할 수 없음. 대신 "처음부터 실패했는가"로 나누면 실질적으로 구분됨(2026-08-21):
+  //   처음부터 실패      → 대기열을 안 거치고 URL로 직접 들어온 경우
+  //   되다가 나중에 실패 → 좌석 고르는 사이 입장 자격(10분)이 만료된 경우
+  const enteredOkRef = useRef(false);
+
+  // 좌석 화면을 더 진행할 수 없을 때: 이유에 맞는 안내 후 원래 공연 상세로 돌려보냄.
+  // performanceId가 없는(대기열을 안 거쳐 URL로 직접 들어온) 경우엔 홈으로 보냄.
+  const leaveSeatPage = () => {
+    if (expiredRef.current) return;
+    expiredRef.current = true;
+
+    if (enteredOkRef.current) {
+      toast.error("대기 시간이 만료되었습니다.\n다시 예매를 시도해주세요.", 5000);
+    } else {
+      toast.error("대기열을 통해 예매를 진행해주세요.", 5000);
+    }
+
+    router.replace(performanceId ? `/events/${performanceId}` : "/");
+  };
+
   useEffect(() => {
-    getSeats(Number(scheduleId))
-      .then(setSeats)
-      .catch(() => setSeats([]))
+    getSeats(Number(scheduleId), queueToken)
+      .then(fresh => {
+        enteredOkRef.current = true;
+        setSeats(fresh);
+      })
+      .catch(() => {
+        // 대기열을 안 거쳤거나(403) 자격이 만료된 경우 — 빈 좌석표를 보여주는 대신 되돌려보냄
+        setSeats([]);
+        leaveSeatPage();
+      })
       .finally(() => setLoading(false));
   }, [scheduleId]);
+
+  // 입장 자격 잔여 시간 조회 — 서버 시각 기준 값을 한 번 받아온 뒤 로컬에서 1초씩 깎는다.
+  // (매초 서버에 물어보면 대기 인원 전체가 초당 수천 건을 만들어내므로 최초 1회만 조회)
+  useEffect(() => {
+    if (!queueToken) return;
+    getQueueStatus(queueToken)
+      .then(status => {
+        if (status.status !== "ENTERED") {
+          leaveSeatPage();
+          return;
+        }
+        setRemainingSec(status.remainingSeconds);
+      })
+      .catch(() => { /* 조회 실패 시 타이머만 안 보이고 좌석 선택은 그대로 진행 */ });
+  }, [queueToken]);
+
+  // 1초마다 카운트다운. 0에 닿으면 만료 처리.
+  useEffect(() => {
+    if (remainingSec === null) return;
+    if (remainingSec <= 0) {
+      leaveSeatPage();
+      return;
+    }
+    const id = setTimeout(() => setRemainingSec(s => (s === null ? null : s - 1)), 1000);
+    return () => clearTimeout(id);
+  }, [remainingSec]);
 
   // 3초마다 좌석 상태 폴링 (다른 사용자의 예매 반영)
   useEffect(() => {
     const id = setInterval(() => {
-      getSeats(Number(scheduleId))
+      getSeats(Number(scheduleId), queueToken)
         .then(fresh => {
           setSeats(fresh);
           // 현재 선택 좌석이 폴링 결과에서 더 이상 AVAILABLE 아니면 선택 해제
@@ -62,10 +130,13 @@ export default function SeatsPage() {
             return updated?.status === "AVAILABLE" ? prev : null;
           });
         })
-        .catch(() => { });
+        .catch(() => {
+          // 폴링 중 403 = 자격 만료. 좌석표를 비우는 대신 안내하고 되돌려보냄
+          leaveSeatPage();
+        });
     }, 3000);
     return () => clearInterval(id);
-  }, [scheduleId]);
+  }, [scheduleId, queueToken]);
 
 
   // [TODO-SEATS-SELECT] 좌석 클릭 시 실행
@@ -187,6 +258,27 @@ export default function SeatsPage() {
                   <div className="seatLegendDot" style={{ background: "var(--border-strong)" }} />
                   <span>예매완료</span>
                 </div>
+
+                {/* 좌석 선택 제한 시간 — 범례 줄 오른쪽 끝(styles/seat.css의 margin-left:auto)에 붙임.
+                    좌석을 고르는 동안 시선이 배치도에 머무르므로, 우측 "예매 정보" 패널보다 여기가
+                    눈에 잘 들어옴(2026-08-21). 3분 이하 주황, 1분 이하 빨강으로 단계적으로 강조. */}
+                {remainingSec !== null && (
+                  <div
+                    className={
+                      remainingSec <= 60
+                        ? "seatTimer seatTimerDanger"
+                        : remainingSec <= 180
+                          ? "seatTimer seatTimerWarn"
+                          : "seatTimer"
+                    }
+                  >
+                    <span className="seatTimerLabel">남은 시간</span>
+                    <span className="seatTimerValue">
+                      {String(Math.floor(remainingSec / 60)).padStart(2, "0")}:
+                      {String(remainingSec % 60).padStart(2, "0")}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* 좌석 그리드 — 각 구역을 좌/중앙/우 3개 블록으로 나누고 양옆 블록을 무대 쪽으로

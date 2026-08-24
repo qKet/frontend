@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import SiteNav from "@/components/SiteNav";
 import { AuthProvider } from "@/context/AuthContext";
 import FaroInit from "@/components/FaroInit";
+import { ToastProvider } from "@/components/ui/ToastProvider";
+import { ConfirmProvider } from "@/components/ui/ConfirmProvider";
 
 export const metadata: Metadata = {
   title: "Q-Ket",
@@ -15,10 +17,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
       <body>
         <FaroInit />
-        <AuthProvider>
-          <SiteNav />
-          {children}
-        </AuthProvider>
+        <ToastProvider>
+          <ConfirmProvider>
+            <AuthProvider>
+              <SiteNav />
+              {children}
+            </AuthProvider>
+          </ConfirmProvider>
+        </ToastProvider>
       </body>
 
     </html>

@@ -51,18 +51,27 @@ export default function RoundCalendar({ performanceId, rounds, title, location, 
     [rounds]
   );
 
-  // 회차가 존재하는 달의 범위 — 이 밖으로는 달 이동을 막아서 빈 달을 계속 넘기지 않게 함
+  // "오늘"이 속한 달 — 회차가 하나도 없어도 이 달 기준 앞뒤로 둘러볼 수 있게 하는 기준점
+  const todayKey = useMemo(() => {
+    const d = new Date();
+    return d.getFullYear() * 12 + d.getMonth();
+  }, []);
+
+  // 달 이동 가능 범위 — 예전엔 "회차가 있는 달"로만 좁혀서, 회차가 몰려있지 않은 공연은 오늘 날짜
+  // 근처를 둘러볼 수조차 없었음(2026-08-21). 이제 회차가 있는 달 범위 ∪ 오늘 기준 앞뒤 2달을 더해서,
+  // 회차 유무와 무관하게 최소한 "지금 이 주변" 달력은 항상 넘겨볼 수 있게 함(예: 8월이면 6~10월).
   const monthKeys = useMemo(() => {
     const keys = dated.map((r) => r.year * 12 + (r.month - 1));
-    return keys.length > 0
-      ? { min: Math.min(...keys), max: Math.max(...keys) }
-      : null;
-  }, [dated]);
+    const dataMin = keys.length > 0 ? Math.min(...keys) : todayKey;
+    const dataMax = keys.length > 0 ? Math.max(...keys) : todayKey;
+    return {
+      min: Math.min(dataMin, todayKey - 2),
+      max: Math.max(dataMax, todayKey + 2),
+    };
+  }, [dated, todayKey]);
 
-  // 첫 회차가 있는 달부터 보여준다
-  const [viewKey, setViewKey] = useState<number>(() =>
-    monthKeys ? monthKeys.min : new Date().getUTCFullYear() * 12
-  );
+  // 첫 화면은 "오늘이 속한 달"부터 — 회차가 나중 달에 몰려있어도 지금 날짜 기준 달력이 먼저 보임
+  const [viewKey, setViewKey] = useState<number>(todayKey);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   // 달 이동 때 서버에서 다시 받아온 회차를 달("YYYY-MM")별로 저장.
@@ -85,11 +94,13 @@ export default function RoundCalendar({ performanceId, rounds, title, location, 
       })
     : dated.filter((r) => r.year === viewYear && r.month === viewMonth);
 
-  // 이미 공연 시각이 지난 회차는 달력 표시(보라색 점)에서 제외 — BookButton의 "closed" 판정
-  // 기준(now >= roundTime)과 동일하게 맞춤. 날짜 자체는 여전히 숫자로 보이지만(muted 스타일),
-  // 클릭 가능한 "회차 있음" 표시는 안 함 — 지난 회차를 예매 가능한 것처럼 보여주지 않기 위함.
+  // 회차가 있는 날짜는 전부 클릭 가능하게 함 — 지난 회차도 눌러서 목록을 볼 수 있어야 함(2026-08-21).
+  // 다만 보라색 점(daysWithFutureRound)은 "지금 예매 가능성이 있는 날"만 표시하고, 지난 회차만
+  // 있는 날은 점 없이 글씨만 회색으로 옅게 처리해서 구분함 — BookButton의 "closed" 판정 기준
+  // (now >= roundTime)과 동일하게 맞춤.
   const now = Date.now();
-  const daysWithRound = new Set(
+  const daysWithAnyRound = new Set(roundsThisMonth.map((r) => r.day));
+  const daysWithFutureRound = new Set(
     roundsThisMonth
       .filter((r) => new Date(r.roundTime.replace(" ", "T")).getTime() > now)
       .map((r) => r.day)
@@ -99,8 +110,8 @@ export default function RoundCalendar({ performanceId, rounds, title, location, 
   const firstWeekday = new Date(Date.UTC(viewYear, viewMonth - 1, 1)).getUTCDay();
   const daysInMonth = new Date(Date.UTC(viewYear, viewMonth, 0)).getUTCDate();
 
-  const canPrev = monthKeys !== null && viewKey > monthKeys.min;
-  const canNext = monthKeys !== null && viewKey < monthKeys.max;
+  const canPrev = viewKey > monthKeys.min;
+  const canNext = viewKey < monthKeys.max;
 
   const moveMonth = async (delta: number) => {
     const nextKey = viewKey + delta;
@@ -188,11 +199,12 @@ export default function RoundCalendar({ performanceId, rounds, title, location, 
 
             {Array.from({ length: daysInMonth }, (_, i) => {
               const day = i + 1;
-              const hasRound = daysWithRound.has(day);
+              const hasAnyRound = daysWithAnyRound.has(day);
+              const hasFutureRound = daysWithFutureRound.has(day);
               const isSelected = selectedDay === day;
 
-              // 회차가 없는 날은 버튼이 아니라 그냥 숫자로 (누를 게 없음)
-              if (!hasRound) {
+              // 회차가 아예 없는 날은 버튼이 아니라 그냥 숫자로 (누를 게 없음)
+              if (!hasAnyRound) {
                 return (
                   <span key={day} className="calendarCell calendarCellMuted">
                     {day}
@@ -200,11 +212,14 @@ export default function RoundCalendar({ performanceId, rounds, title, location, 
                 );
               }
 
+              // 지난 회차만 있는 날 — 클릭은 되지만(목록에서 확인 가능) 점 없이 글씨만 옅게
+              const cellClass = hasFutureRound ? "calendarCellHas" : "calendarCellPast";
+
               return (
                 <button
                   key={day}
                   type="button"
-                  className={`calendarCell calendarCellHas${isSelected ? " calendarCellSelected" : ""}`}
+                  className={`calendarCell ${cellClass}${isSelected ? " calendarCellSelected" : ""}`}
                   aria-pressed={isSelected}
                   aria-label={`${viewMonth}월 ${day}일 회차 보기`}
                   // 같은 날짜를 다시 누르면 선택 해제 → 이 달 전체로 돌아감
@@ -214,7 +229,7 @@ export default function RoundCalendar({ performanceId, rounds, title, location, 
                   }}
                 >
                   {day}
-                  <span className="calendarDot" aria-hidden="true" />
+                  {hasFutureRound && <span className="calendarDot" aria-hidden="true" />}
                 </button>
               );
             })}
@@ -285,6 +300,7 @@ export default function RoundCalendar({ performanceId, rounds, title, location, 
                     <OpenAlertToggle roundId={round.roundId} openTime={round.openTime} />
                     <BookButton
                       roundId={round.roundId}
+                      performanceId={performanceId}
                       roundTime={round.roundTime}
                       openTime={round.openTime}
                       title={title}

@@ -15,11 +15,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import type { Seat } from "@/lib/data/types";
 import { getSeats } from "@/lib/api/seats"
-<<<<<<< HEAD
-import { leaveQueue } from "@/lib/api/queues";
-=======
-import { getQueueStatus } from "@/lib/api/queues";
->>>>>>> 74e69ebf35810a148401a940933eaf8094fbbadf
+import { leaveQueue, getQueueStatus } from "@/lib/api/queues";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import PageHeader from "@/components/ui/PageHeader";
@@ -50,7 +46,6 @@ export default function SeatsPage() {
   // UI 상태
   const [loading, setLoading] = useState(true);
 
-<<<<<<< HEAD
   // 전 좌석 매진(AVAILABLE 0개) 감지 — 감지되는 즉시 대기열 슬롯도 반납함(아래 checkSoldOut 참고)
   const [soldOut, setSoldOut] = useState(false);
 
@@ -60,7 +55,7 @@ export default function SeatsPage() {
   const proceedingRef = useRef(false);
 
   // 응답에 AVAILABLE 좌석이 하나도 없으면 매진 — 더 이상 이 화면에서 할 게 없으므로 대기열 슬롯을
-  // 바로 반납함(QueueModal.tsx의 beforeunload 패턴과 같은 이유: 안 하면 ACTIVE_TTL(10분)이 다 될
+  // 바로 반납함(QueueModal.tsx의 beforeunload 패턴과 같은 이유: 안 하면 ACTIVE_TTL(5분)이 다 될
   // 때까지 자리를 붙잡고 있어서 다음 대기자가 못 들어옴 — 2026-08-24 실측으로 확인된 병목,
   // CLAUDE_LLM_WIKI troubleshooting/backend-cold-start-cpu-contention-during-rollout 참고)
   const checkSoldOut = (list: Seat[]) => {
@@ -71,16 +66,8 @@ export default function SeatsPage() {
     }
   };
 
-  useEffect(() => {
-    getSeats(Number(scheduleId))
-      .then(fresh => {
-        setSeats(fresh);
-        checkSoldOut(fresh);
-      })
-      .catch(() => setSeats([]))
-=======
   // 대기열 입장 자격의 남은 시간(초). null이면 아직 조회 전.
-  // 백엔드 ACTIVE_TTL(10분)이 지나면 좌석 조회/예약이 403으로 거부되는데, 그전엔 프론트가
+  // 백엔드 ACTIVE_TTL이 지나면 좌석 조회/예약이 403으로 거부되는데, 그전엔 프론트가
   // 이 시간을 알 방법이 없어서 사용자가 이유도 모른 채 튕겼음(2026-08-21).
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
 
@@ -92,7 +79,7 @@ export default function SeatsPage() {
   // 백엔드(SeatController)는 "토큰 없음 / 잘못된 토큰 / 만료" 세 경우 모두 똑같이 403을 주기 때문에
   // 응답만으로는 구분할 수 없음. 대신 "처음부터 실패했는가"로 나누면 실질적으로 구분됨(2026-08-21):
   //   처음부터 실패      → 대기열을 안 거치고 URL로 직접 들어온 경우
-  //   되다가 나중에 실패 → 좌석 고르는 사이 입장 자격(10분)이 만료된 경우
+  //   되다가 나중에 실패 → 좌석 고르는 사이 입장 자격이 만료된 경우
   const enteredOkRef = useRef(false);
 
   // 좌석 화면을 더 진행할 수 없을 때: 이유에 맞는 안내 후 원래 공연 상세로 돌려보냄.
@@ -115,13 +102,13 @@ export default function SeatsPage() {
       .then(fresh => {
         enteredOkRef.current = true;
         setSeats(fresh);
+        checkSoldOut(fresh);
       })
       .catch(() => {
         // 대기열을 안 거쳤거나(403) 자격이 만료된 경우 — 빈 좌석표를 보여주는 대신 되돌려보냄
         setSeats([]);
         leaveSeatPage();
       })
->>>>>>> 74e69ebf35810a148401a940933eaf8094fbbadf
       .finally(() => setLoading(false));
   }, [scheduleId]);
 

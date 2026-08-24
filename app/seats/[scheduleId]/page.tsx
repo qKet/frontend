@@ -11,10 +11,11 @@
 // 공연장 좌석 배치도를 그리드로 그려서 보여주고 VIP/R/S 등급별 색상을 다르게 표시
 // 좌석 선점 기능이 들어갈 화면
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import type { Seat } from "@/lib/data/types";
 import { getSeats } from "@/lib/api/seats"
+import { leaveQueue } from "@/lib/api/queues";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import PageHeader from "@/components/ui/PageHeader";
@@ -42,9 +43,32 @@ export default function SeatsPage() {
   // UI 상태
   const [loading, setLoading] = useState(true);
 
+  // 전 좌석 매진(AVAILABLE 0개) 감지 — 감지되는 즉시 대기열 슬롯도 반납함(아래 checkSoldOut 참고)
+  const [soldOut, setSoldOut] = useState(false);
+
+  // 결제 화면으로 정상적으로 넘어가는 중인지 표시 — true면 언마운트돼도 대기열 슬롯을 반납하지 않음
+  // (예매를 계속 진행 중인 것이므로). false인 채로 언마운트되면 뒤로가기/탭 닫기 등으로 이 화면을
+  // 벗어나는 것 → 슬롯을 더 붙잡고 있을 이유가 없어서 반납함.
+  const proceedingRef = useRef(false);
+
+  // 응답에 AVAILABLE 좌석이 하나도 없으면 매진 — 더 이상 이 화면에서 할 게 없으므로 대기열 슬롯을
+  // 바로 반납함(QueueModal.tsx의 beforeunload 패턴과 같은 이유: 안 하면 ACTIVE_TTL(10분)이 다 될
+  // 때까지 자리를 붙잡고 있어서 다음 대기자가 못 들어옴 — 2026-08-24 실측으로 확인된 병목,
+  // CLAUDE_LLM_WIKI troubleshooting/backend-cold-start-cpu-contention-during-rollout 참고)
+  const checkSoldOut = (list: Seat[]) => {
+    if (list.length > 0 && list.every(s => s.status !== "AVAILABLE")) {
+      setSoldOut(true);
+      proceedingRef.current = true; // 이후 unmount 시 중복 반납 방지
+      if (queueToken) leaveQueue(queueToken);
+    }
+  };
+
   useEffect(() => {
     getSeats(Number(scheduleId))
-      .then(setSeats)
+      .then(fresh => {
+        setSeats(fresh);
+        checkSoldOut(fresh);
+      })
       .catch(() => setSeats([]))
       .finally(() => setLoading(false));
   }, [scheduleId]);
@@ -55,6 +79,7 @@ export default function SeatsPage() {
       getSeats(Number(scheduleId))
         .then(fresh => {
           setSeats(fresh);
+          checkSoldOut(fresh);
           // 현재 선택 좌석이 폴링 결과에서 더 이상 AVAILABLE 아니면 선택 해제
           setSelected(prev => {
             if (!prev) return null;
@@ -66,6 +91,20 @@ export default function SeatsPage() {
     }, 3000);
     return () => clearInterval(id);
   }, [scheduleId]);
+
+  // 대기열 슬롯 반납 — 결제 단계로 안 넘어가고 이 화면을 벗어나면(뒤로가기/탭 닫기) 반납.
+  // QueueModal은 대기(WAITING) 중에만 반납을 챙기고 ENTERED 이후(이 화면)는 안 챙기므로 여기서 이어받음.
+  useEffect(() => {
+    if (!queueToken) return;
+
+    const handleBeforeUnload = () => leaveQueue(queueToken);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      if (!proceedingRef.current) leaveQueue(queueToken);
+    };
+  }, [queueToken]);
 
 
   // [TODO-SEATS-SELECT] 좌석 클릭 시 실행
@@ -85,6 +124,9 @@ export default function SeatsPage() {
   // 늦은 사람은 confirm 시점의 락(ReservationServiceImpl.reserve)에서 걸러져 결제가 자동 취소(환불)됨.
   const handleReserve = () => {
     if (!selected) return;
+
+    // 결제 화면으로 넘어가는 정상 경로 — 언마운트되더라도 대기열 슬롯은 반납하지 않음
+    proceedingRef.current = true;
 
     const params = new URLSearchParams({
       reservationId: String(selected.reservationId),
@@ -163,6 +205,15 @@ export default function SeatsPage() {
       <PageHeader wide title="좌석 선택" subtitle="원하는 좌석을 선택한 뒤 예매를 완료하세요.">
         {loading ? (
           <StatusMessage variant="loading">좌석 정보를 불러오는 중...</StatusMessage>
+        ) : soldOut ? (
+          <>
+            <StatusMessage variant="error">매진되었습니다. 아쉽지만 이 회차는 좌석이 모두 마감됐어요.</StatusMessage>
+            <div style={{ marginTop: "var(--space-4)" }}>
+              <Button variant="secondary" onClick={() => router.push("/")}>
+                공연 목록으로
+              </Button>
+            </div>
+          </>
         ) : (
           <div className="seatLayout">
             {/* 좌석 배치도 */}

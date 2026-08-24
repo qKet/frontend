@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/ui/Button";
 import PageHeader from "@/components/ui/PageHeader";
 import StatusMessage from "@/components/ui/StatusMessage";
+import { leaveQueue } from "@/lib/api/queues";
 
 function FailContent() {
   const router = useRouter();
@@ -41,6 +42,13 @@ function FailContent() {
     router.push(`/payments/checkout?${params.toString()}`);
   };
 
+  // "다시 시도" 없이 아예 포기하는 경우 — 대기열 슬롯을 계속 붙잡고 있을 이유가 없으므로 반납
+  // (재시도는 handleRetry가 같은 queueToken을 그대로 들고 checkout으로 돌아가므로 여기서 반납 안 함)
+  const handleGiveUp = () => {
+    if (queueToken) leaveQueue(queueToken);
+    router.push("/");
+  };
+
   return (
     <PageHeader title="결제 실패" subtitle="결제가 완료되지 않았습니다.">
       <StatusMessage variant="error">
@@ -55,7 +63,7 @@ function FailContent() {
             다시 시도
           </Button>
         )}
-        <Button variant="secondary" onClick={() => router.push("/")}>
+        <Button variant="secondary" onClick={handleGiveUp}>
           공연 목록으로
         </Button>
       </div>

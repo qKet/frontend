@@ -20,7 +20,8 @@ export default async function PerformanceDetailPage({
   // lib/api/events.ts 의 getEvent() 는 apiFetch 기반이라 상대경로("/api/...")를 쓴다.
   // 서버 컴포넌트에서는 상대경로 fetch가 안 되므로 여기서는 절대경로로 직접 호출하고
   // unwrap 으로 { success, data, ... } 래퍼를 벗긴다 (app/page.tsx 와 같은 방식).
-  const res = await fetch(`${BASE_URL}/api/events/${performanceId}`, { cache: "no-store" });
+  // 공연 상세 정보도 홈과 같은 이유로 1분 재검증 캐싱 적용(frontend#27)
+  const res = await fetch(`${BASE_URL}/api/events/${performanceId}`, { next: { revalidate: 60 } });
 
   // 없는 공연이면 백엔드가 400(C001)을 준다 → 화면에서는 404로 처리
   if (!res.ok) notFound();
@@ -91,7 +92,7 @@ export default async function PerformanceDetailPage({
       />
 
       {/* 출연진 / 감상평 탭 */}
-      <PerformanceTabs commonCasts={commonCasts} roundCasts={roundCasts} />
+      <PerformanceTabs performanceId={performanceId} commonCasts={commonCasts} roundCasts={roundCasts} />
     </PageHeader>
   );
 }

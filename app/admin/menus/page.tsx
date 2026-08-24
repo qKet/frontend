@@ -71,6 +71,7 @@ export default function AdminMenusPage() {
   const [changes, setChanges] = useState<Record<number, RowChange>>({});
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [keyword, setKeyword] = useState("");
 
   const [newMenu, setNewMenu] = useState<{ menuNm: string; programId: number | ""; parentMenuId: number | ""; sortOrder: string }>({
     menuNm: "",
@@ -94,6 +95,11 @@ export default function AdminMenusPage() {
 
   const changeCount = Object.keys(changes).length;
   const menuRows = buildMenuRows(menus);
+  const keywordLower = keyword.trim().toLowerCase();
+  // 트리 구조(들여쓰기)는 유지하되, 이름이 검색어와 일치하는 행만 남김
+  const filteredMenuRows = keywordLower
+    ? menuRows.filter(({ menu }) => menu.menuNm.toLowerCase().includes(keywordLower))
+    : menuRows;
 
   const handleChange = <K extends keyof RowChange>(menuId: number, field: K, value: RowChange[K]) => {
     setChanges((prev) => ({ ...prev, [menuId]: { ...prev[menuId], [field]: value } }));
@@ -246,6 +252,17 @@ export default function AdminMenusPage() {
         </div>
       </div>
 
+      <div className="adminFormRow">
+        <span className="adminLabel">검색</span>
+        <input
+          type="text"
+          className="adminInput"
+          placeholder="메뉴 이름으로 검색"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+        />
+      </div>
+
       <div className="adminTableWrap">
         <table className="adminTable">
           <thead>
@@ -261,7 +278,10 @@ export default function AdminMenusPage() {
             </tr>
           </thead>
           <tbody>
-            {menuRows.map(({ menu: m, depth }) => {
+            {filteredMenuRows.length === 0 && (
+              <tr><td colSpan={8} className="emptyMsg">검색 결과가 없습니다.</td></tr>
+            )}
+            {filteredMenuRows.map(({ menu: m, depth }) => {
               const isDirty = !!changes[m.menuId];
               const excluded = getDescendantIds(menus, m.menuId); // 자기 자신 + 하위메뉴는 상위메뉴로 선택 불가(순환 방지)
               // 아직 한 번도 수정 안 된 행은 등록자/등록일을 "최종수정" 자리에 대신 보여줌(등록도 최초의 터치로 취급)

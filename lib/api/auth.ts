@@ -144,3 +144,53 @@ export async function getMe(): Promise<UserDTO | null> {
     return null;
   }
 }
+
+// ============================================================
+// POST /api/auth/password/code
+// 백엔드: UserController.java → requestPasswordResetCode()
+// 기능: 비밀번호 찾기 1단계 — 아이디+이메일이 일치하는 계정에 비밀번호 재설정 링크를 이메일로 발송
+//       (SQS 발행 → notification-mailer Lambda가 type: PASSWORD_RESET으로 SES 발송)
+//
+// 사용 예시:
+//   import { requestPasswordResetCode } from "@/lib/api/auth";
+//
+//   try {
+//     await requestPasswordResetCode(userId, userEmail);
+//     setSent(true); // "이메일을 확인하세요" 안내 화면으로 전환
+//   } catch (e: any) {
+//     setError(e.message);
+//   }
+//
+// 요청 JSON (프론트 → 백엔드, body):
+//   { "userId": "test01", "userEmail": "a@a.com" }
+//
+// 응답 JSON:
+//   성공: { "success": true, "message": "비밀번호 재설정 링크를 이메일로 전송했습니다." }
+//   실패: apiFetch 가 Error 로 throw (아이디/이메일 불일치, 소셜 로그인 전용 계정 등)
+// ============================================================
+export async function requestPasswordResetCode(userId: string, userEmail: string): Promise<ApiResult> {
+  return apiFetch<ApiResult>("/auth/password/code", {
+    method: "POST",
+    body: { userId, userEmail },
+  });
+}
+
+// ============================================================
+// POST /api/auth/password/reset
+// 백엔드: UserController.java → resetPassword()
+// 기능: 비밀번호 찾기 2단계 — 이메일로 받은 링크의 토큰(?token=...) 확인 후 새 비밀번호로 변경
+//       (1회용 토큰, 15분 만료). 이 링크로 열리는 페이지는 app/(auth)/find-password/confirm/page.tsx
+//
+// 요청 JSON (프론트 → 백엔드, body):
+//   { "token": "xYz...(랜덤 토큰)", "newPwd": "새비밀번호" }
+//
+// 응답 JSON:
+//   성공: { "success": true, "message": "비밀번호가 재설정되었습니다." }
+//   실패: apiFetch 가 Error 로 throw (토큰 무효/만료 등)
+// ============================================================
+export async function resetPassword(token: string, newPwd: string): Promise<ApiResult> {
+  return apiFetch<ApiResult>("/auth/password/reset", {
+    method: "POST",
+    body: { token, newPwd },
+  });
+}

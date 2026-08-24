@@ -14,6 +14,8 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import PageHeader from "@/components/ui/PageHeader";
 import StatusMessage from "@/components/ui/StatusMessage";
+import { useToast } from "@/components/ui/ToastProvider";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
 import { getMyPayments, cancelPayment, deletePayment } from "@/lib/api/payments"
 
 // 결제 상태 표시 라벨/Badge variant
@@ -31,6 +33,8 @@ export default function MyPage() {
   const router = useRouter();
 
   const { userSession } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
 
   // 결제 내역 목록
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -49,7 +53,7 @@ export default function MyPage() {
 
   // 결제 내역의 "환불 요청" 버튼 클릭 시 실행 — 토스 환불 + 좌석 반납까지 한 번에 처리됨
   const handleCancelPayment = async (paymentId: number) => {
-    if (!confirm("결제를 취소하시겠습니까? 환불이 진행되고 좌석도 함께 취소됩니다.")) return;
+    if (!(await confirm("결제를 취소하시겠습니까?\n환불이 진행되고 좌석도 함께 취소됩니다.", { danger: true }))) return;
 
     setCancellingPayment(paymentId);
     try {
@@ -58,7 +62,7 @@ export default function MyPage() {
         prev.map(p => p.paymentId === paymentId ? canceled : p)
       );
     } catch (e: any) {
-      alert(e?.message ?? "결제 취소에 실패했습니다.");
+      toast.error(e?.message ?? "결제 취소에 실패했습니다.");
     } finally {
       setCancellingPayment(null);
     }
@@ -71,7 +75,7 @@ export default function MyPage() {
       await deletePayment(paymentId);
       setPayments(prev => prev.filter(p => p.paymentId !== paymentId));
     } catch (e: any) {
-      alert(e?.message ?? "삭제에 실패했습니다.");
+      toast.error(e?.message ?? "삭제에 실패했습니다.");
     } finally {
       setDeletingPayment(null);
     }

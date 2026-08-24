@@ -164,3 +164,28 @@
 .fieldInput::placeholder {
   color: var(--text-3);
 }
+
+/* 감상평 작성 등 여러줄 입력 — fieldInput과 같은 톤, resize만 세로로 제한 */
+.fieldTextarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  background: var(--surface2);
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.fieldTextarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.fieldTextarea::placeholder {
+  color: var(--text-3);
+}

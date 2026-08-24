@@ -1,21 +1,23 @@
 # #######################################
-# CI-release.yml
-# release 브랜치에 push 시 frontend 이미지 빌드 + ECR push + qKet/CD write-back까지 담당.
+# CI-main.yml
+# main 브랜치에 push 시 frontend 이미지 빌드 + ECR push + qKet/CD write-back까지 담당 — prod용.
+# CI-release.yml과 거의 동일, 다른 점은 트리거 브랜치(main), Toss 키를 가져오는 Secrets Manager
+# 시크릿(-prod, release는 -release), write-back 대상 파일(helm/values-prod.yaml)뿐.
 #
 # 배포(CD)는 argoCD가 담당:
 #   - namespace/ingress/networkpolicy → Infra/kubernetes (ArgoCD Application "infra-manifests")
-#   - Deployment/Service              → qKet/CD (ArgoCD Application "app-deploy")
+#   - Deployment/Service              → qKet/CD (ArgoCD Application "qket-cd-prod")
 #
 # qKet/CD write-back 인증: GitHub App(qket-ci-bot, qKet 조직 소유, CD 레포에만 설치,
 # Contents:Read-and-write 권한만) — PAT 대신 이 방식을 쓴 이유는 장기 자격증명을 시크릿에
 # 안 두기 위해서(QKET_CI_APP_PRIVATE_KEY로 실행할 때마다 ~1시간짜리 토큰을 새로 발급받음).
 # #######################################
-name: Build & Push (frontend, release)
+name: Build & Push (frontend, prod)
 
 on:
   push:
     branches:
-      - release
+      - main
   workflow_dispatch:
 
 permissions:
@@ -36,8 +38,6 @@ jobs:
       # 장기 자격증명을 GitHub 시크릿에 안 둠 (CI 도구 선택 ADR에서 결정한 방향).
       # AWS_GITHUB_ACTIONS_ROLE_ARN — Infra/registry의 github_actions_oidc 모듈(repos.frontend)이
       # 만드는 role. ECR push + 아래 Secrets Manager 시크릿 하나(team5-qket-external-api-*) 읽기 권한만.
-      # build 스텝보다 먼저 와야 함(토스 키를 빌드 시점에 가져가야 하니까) — 원래는 build 다음에
-      # 있었는데 여기로 옮김.
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -47,38 +47,24 @@ jobs:
       # NEXT_PUBLIC_TOSS_CLIENT_KEY: Next.js가 next build 시점에 값을 JS 번들에 고정으로
       # 박아넣는 클라이언트사이드 변수라서(K8s Deployment env로는 절대 못 넣음 — 그건 런타임),
       # 여기서 미리 AWS Secrets Manager(04_data/module.eso가 만든 시크릿)에서 직접 값을 꺼내와야 함.
-      # GitHub Secret에 값을 복사해두지 않고 매번 AWS에서 직접 읽어오는 이유: 값의 원본이
-      # Secrets Manager 한 곳에만 있게 하려고(복사본이 여기저기 있으면 나중에 값이 바뀌었을 때
-      # 어디를 갱신해야 하는지 헷갈리고, 어긋날 위험도 생김).
+      # release용 워크플로우와 다른 점: 여기는 team5-qket-external-api-prod(prod 전용 시크릿)를 읽음.
       - name: Fetch Toss client key from Secrets Manager
         id: toss
         run: |
           KEY=$(aws secretsmanager get-secret-value \
-            --secret-id team5-qket-external-api-release \
+            --secret-id team5-qket-external-api-prod \
             --query SecretString --output text | jq -r .TOSS_CLIENT_KEY)
           echo "::add-mask::$KEY"
           echo "key=$KEY" >> "$GITHUB_OUTPUT"
 
-      # Next.js 빌드는 Docker 안(멀티스테이지)이 아니라 여기서 함 — Dockerfile은 이 결과물
-      # (.next/standalone 등)을 담기만 하는 single-stage(backend Dockerfile과 동일 패턴).
-      # cache: npm으로 의존성 캐싱되고, 빌드 실패가 Docker 빌드 로그에 안 파묻히고 여기서
-      # 바로 실패/표시됨. package.json에 별도 test 스크립트가 없어서 build만 검증.
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
-      # NEXT_PUBLIC_FARO_COLLECTOR_URL도 위 토스 키와 같은 이유(빌드 시점에 JS 번들에 박힘)로
-      # 여기서 넣어줌 — 토스 키와 달리 이건 비밀값이 아니라 그냥 공개 엔드포인트 URL이라
-      # Secrets Manager 안 거치고 여기 직접 적음. Infra/02_k8s-addon의 faro_ingress가 만드는
-      # dev.jun979.click/collect 경로와 짝이 맞아야 함 — 그 경로 바뀌면 여기도 같이 바꿔야 함.
-      # 2026-08-19: 원래 "/faro-collector"였는데 Alloy의 faro.receiver가 "/collect" 경로만
-      # 받아들여서(ALB는 nginx처럼 경로 rewrite를 못 함) 404가 났음 — 그래서 "/collect"로 수정.
       - name: Install & build
         env:
           NEXT_PUBLIC_TOSS_CLIENT_KEY: ${{ steps.toss.outputs.key }}
-          NEXT_PUBLIC_FARO_COLLECTOR_URL: https://dev.jun979.click/collect
-          NEXT_PUBLIC_APP_ENV: release
         run: |
           npm ci
           npm run build
@@ -87,14 +73,11 @@ jobs:
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 이미지 태그: frontend-{커밋SHA 앞 7글자} — 뒤 write-back 스텝에서도 같은 값을 써야 해서
-      # step output으로 뽑아둠(태그 계산 로직이 두 군데(빌드/write-back)서 따로 계산되다 어긋나는 걸 방지).
+      # 이미지 태그: frontend-{커밋SHA 앞 7글자}
       - name: Compute image tag
         id: tag
         run: echo "tag=frontend-$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
 
-      # 빌드 컨텍스트가 "."인 이유: 이 워크플로우가 frontend 레포 자체 안에 있어서
-      # (예전 모노레포 시절엔 "./frontend"였음 — 레포 분리 후 경로 수정됨)
       - name: Build and push frontend image
         env:
           REGISTRY: ${{ steps.ecr-login.outputs.registry }}
@@ -121,9 +104,9 @@ jobs:
           token: ${{ steps.cd-app-token.outputs.token }}
           path: cd-repo
 
-      # helm/values-release.yaml(2026-08-21 이전엔 helm/values.yaml)의 "frontend:" 블록 안 첫
-      # image 줄만 찾아서 값 교체 — backend.image를 안 건드리게 "frontend:" 다음 줄부터 다음
-      # 최상위 키 전까지로 범위를 좁힘.
+      # helm/values-prod.yaml의 "frontend:" 블록 안 첫 image 줄만 찾아서 값 교체 — release와
+      # 달리 이 파일은 helm/values-release.yaml 위에 얹히는 오버레이라 image 필드가 명시적으로
+      # 있어야 함(안 그러면 release 값을 그대로 상속해버림, CD/helm/values-prod.yaml 참고).
       - name: Update image tag in qKet/CD
         env:
           REGISTRY: ${{ steps.ecr-login.outputs.registry }}
@@ -131,10 +114,10 @@ jobs:
         run: |
           IMAGE="$REGISTRY/$ECR_REPOSITORY:$TAG"
           cd cd-repo
-          sed -i -E "/^frontend:/,/^[a-zA-Z]/ s|^(  image: ).*|\1$IMAGE|" helm/values-release.yaml
+          sed -i -E "/^frontend:/,/^[a-zA-Z]/ s|^(  image: ).*|\1$IMAGE|" helm/values-prod.yaml
           git config user.name "qket-ci-bot[bot]"
           git config user.email "qket-ci-bot[bot]@users.noreply.github.com"
-          git add helm/values-release.yaml
+          git add helm/values-prod.yaml
           git diff --cached --quiet && echo "No image change, skip commit" && exit 0
-          git commit -m "chore: update frontend image to $TAG"
+          git commit -m "chore: update frontend(prod) image to $TAG"
           git push

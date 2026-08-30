@@ -33,10 +33,9 @@ const toInputDatetime = (v: string) => {
   return v.replace(" ", "T").substring(0, 16);
 };
 
-// 예매가 "오픈"됐다고(openTime <= now) 무조건 잠그면, 공연 자체가 완전히 끝난(모든 회차의
-// roundTime도 이미 지난) 옛날 공연까지 영원히 삭제가 안 되는 버그가 있었음(2026-08-21). 실제로
+// openTime <= now만으로 무조건 잠그면 완전히 끝난 옛날 공연까지 영원히 삭제가 안 됨 — 실제로
 // 막아야 하는 건 "지금 활성 예매가 있을 수 있는 회차"뿐이라, openTime은 지났지만 roundTime은
-// 아직 안 지난(=예매 오픈됐고 공연도 아직 안 끝난) 회차가 있을 때만 잠그도록 조건을 좁힘.
+// 아직 안 지난 회차가 있을 때만 잠그도록 조건을 좁힘.
 const isLocked = (perf: Performance) => {
   const now = new Date();
   return perf.rounds?.some(r => new Date(r.openTime) <= now && new Date(r.roundTime) > now) ?? false;
@@ -460,10 +459,8 @@ export default function AdminPerformancesPage() {
                 )}
                 {(editingPerf.rounds ?? []).map((r, idx) => {
                   const roundLocked = new Date(r.openTime) <= new Date();
-                  // 수정(시간 변경)은 "오픈됐으면" 계속 막아야 하지만(이미 예매한 사람들 시간이 바뀌면
-                  // 안 되니까), 삭제는 그와 달리 "공연 자체가 아직 안 끝났을 때"만 막으면 됨 — 이미
-                  // 공연 시각(roundTime)까지 지난 회차는 삭제해도 아무 문제 없는데 예전엔 openTime만
-                  // 보고 영원히 잠가서 지난 회차를 못 지우는 버그가 있었음(2026-08-21).
+                  // 수정(시간 변경)은 오픈됐으면 계속 막아야 하지만(예매자 시간이 바뀌면 안 되니까),
+                  // 삭제는 공연이 아직 안 끝났을 때만 막으면 됨 — roundTime까지 지난 회차는 삭제해도 무방.
                   const roundEnded = new Date(r.roundTime) <= new Date();
                   const roundDeleteLocked = roundLocked && !roundEnded;
                   return (

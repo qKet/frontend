@@ -1,16 +1,8 @@
 "use client";
 
-// 공연 상세 화면의 회차 달력 (PER02_DETAIL02).
-// 달력에서 날짜를 고르면 아래 회차 목록이 그 날짜만 남는 "필터" 방식이고,
-// 달 이동(◀ ▶)은 보고 있는 달을 바꾼다.
-//
-// [요청 시점]
-//  · 날짜 클릭 → 요청 없음. 이미 받아둔 그 달 회차에서 걸러내기만 한다(누를 때마다 요청하면 반응이 느려짐).
-//  · 달 이동   → GET /api/events/{performanceId}/calendar?month=YYYY-MM 으로 그 달 회차를 다시 받아온다.
-//
-// props.rounds(상세 응답에 들어있는 전체 회차)는 두 가지 용도로만 쓴다:
-//  ① 첫 화면에 보여줄 달을 정하고 ② 달 이동 가능 범위를 계산.
-// 처음 보는 달의 회차는 이미 rounds 안에 있어서 추가 요청 없이 그린다.
+// 공연 상세 화면의 회차 달력(PER02_DETAIL02). 날짜 클릭은 이미 받아둔 그 달 회차를 클라이언트
+// 에서 필터링만 하고(요청 없음), 달 이동(◀ ▶)만 GET .../calendar?month=YYYY-MM으로 다시 받아옴.
+// props.rounds(상세 응답의 전체 회차)는 첫 화면에 보여줄 달을 정하고 이동 가능 범위를 계산하는 데 씀.
 
 import { useMemo, useState } from "react";
 import BookButton from "@/components/BookButton";
@@ -94,10 +86,9 @@ export default function RoundCalendar({ performanceId, rounds, title, location, 
       })
     : dated.filter((r) => r.year === viewYear && r.month === viewMonth);
 
-  // 회차가 있는 날짜는 전부 클릭 가능하게 함 — 지난 회차도 눌러서 목록을 볼 수 있어야 함(2026-08-21).
-  // 다만 보라색 점(daysWithFutureRound)은 "지금 예매 가능성이 있는 날"만 표시하고, 지난 회차만
-  // 있는 날은 점 없이 글씨만 회색으로 옅게 처리해서 구분함 — BookButton의 "closed" 판정 기준
-  // (now >= roundTime)과 동일하게 맞춤.
+  // 회차가 있는 날짜는 전부 클릭 가능(지난 회차도 목록은 볼 수 있음). 보라색 점(daysWithFutureRound)은
+  // "지금 예매 가능성이 있는 날"만 표시하고, 지난 회차만 있는 날은 점 없이 글씨만 회색 처리 —
+  // BookButton의 "closed" 판정 기준(now >= roundTime)과 동일.
   const now = Date.now();
   const daysWithAnyRound = new Set(roundsThisMonth.map((r) => r.day));
   const daysWithFutureRound = new Set(

@@ -1,15 +1,8 @@
 import { InputHTMLAttributes, forwardRef } from "react";
 
 /**
- * 공통 입력창 컴포넌트 — styles/auth.css 의 .fieldInput 과 styles/admin.css 의 .adminInput 을
- * variant prop 하나로 골라 쓸 수 있게 감싼 것.
- *
- * 사용 예:
- *   <Input placeholder="아이디를 입력하세요" value={userId} onChange={...} />        (variant 기본값 auth)
- *   <Input variant="admin" value={editTitle} onChange={...} ref={editTitleRef} />
- *
- * CSS 값은 전혀 바꾸지 않음 — 기존 className 문자열을 그대로 조립해서 붙여주기만 함.
- * ref 전달 필요 (관리자 폼에서 유효성 검사 실패 시 focus 이동에 사용).
+ * 공통 입력창 — styles/auth.css의 .fieldInput과 styles/admin.css의 .adminInput을 variant prop으로
+ * 골라 쓰게 감싼 것. ref 전달 필요(관리자 폼에서 유효성 검사 실패 시 focus 이동에 사용).
  */
 
 type InputVariant = "auth" | "admin";

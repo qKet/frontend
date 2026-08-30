@@ -42,11 +42,8 @@ const CARD_STATUS = {
 
 type CardStatus = keyof typeof CARD_STATUS;
 
-// 카드용 회차 요약.
-// 공연마다 회차 수가 2~12회로 제각각이라 목록에 전부 나열하면 카드 높이가 들쭉날쭉해지고
-// (그리드 행 높이가 제일 긴 카드에 맞춰져 옆 카드에 빈 공간이 생김),
-// 회차마다 붙던 BookButton 이 각각 1초 타이머를 돌려서 낭비도 컸다.
-// → 목록은 "기간 + 회차 수 + 상태" 한 줄로 줄이고, 회차 선택·예매는 상세 화면의 달력에서 한다.
+// 카드용 회차 요약 — 회차 수가 공연마다 제각각(2~12회)이라 전부 나열하면 카드 높이가 들쭉날쭉해지고
+// 회차마다 붙는 BookButton의 타이머도 낭비라, "기간 + 회차 수 + 상태" 한 줄로 줄임(회차 선택/예매는 상세 화면).
 function summarizeRounds(rounds: Round[]): { schedule: string; status: CardStatus } {
   if (rounds.length === 0) return { schedule: "회차 미정", status: "BEFORE" };
 
@@ -100,10 +97,9 @@ export default async function EventsPage({
   if (categoryId != null) eventsQuery.set("categoryId", String(categoryId));
   if (keyword) eventsQuery.set("keyword", keyword);
 
-  // 카테고리/공연 목록은 몇 초~몇 분 단위로도 잘 안 바뀌는 데이터라 no-store로 매번 backend까지
-  // 재왕복하지 않고 1분 단위로 재검증 — 홈이 트래픽이 제일 몰리는 페이지라 부하테스트에서 가장 먼저
-  // 무너진 원인이었음(frontend#27, wiki/troubleshooting/loadtest-10000-open-run-cascading-failures.md)
-  //카테고리 목록 + events api 호출 (페이지 단위, 카테고리 필터·검색어 포함)
+  // 카테고리/공연 목록은 잘 안 바뀌는 데이터라 1분 단위로 재검증(no-store 대신) — 홈이 트래픽이
+  // 제일 몰리는 페이지라 부하테스트에서 가장 먼저 무너진 원인이었음.
+  // 카테고리 목록 + events api 호출 (페이지 단위, 카테고리 필터·검색어 포함)
   const [categoriesRes, res] = await Promise.all([
     fetch(`${BASE_URL}/api/categories`, { next: { revalidate: 60 } }),
     fetch(`${BASE_URL}/api/events/paged?${eventsQuery.toString()}`, {

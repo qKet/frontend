@@ -1,25 +1,9 @@
 import { ReactNode } from "react";
 
 /**
- * 페이지 최상단 틀 컴포넌트 — styles/layout.css 의 .pageWrap(/.pageWrapWide)+.pageHeader+.pageTitle+.pageSubtitle 과
- * styles/admin.css 의 .adminPageHeader 를 variant prop 하나로 골라 쓸 수 있게 감싼 것.
- * 페이지 전체를 감싸는 최상위 div(pageWrap) 역할까지 함께 하므로 children 으로 나머지 페이지 내용을 넘겨받음.
- *
- * 사용 예:
- *   <PageHeader title="마이페이지" subtitle="계정 정보와 예매 내역을 확인합니다.">
- *     ...나머지 페이지 내용...
- *   </PageHeader>
- *
- *   <PageHeader
- *     variant="admin"
- *     title="공연 관리"
- *     subtitle="공연을 수정하거나 삭제합니다."
- *     actions={<Button variant="primary" onClick={...}>+ 공연 추가</Button>}
- *   >
- *     ...나머지 페이지 내용...
- *   </PageHeader>
- *
- * CSS 값은 전혀 바꾸지 않음 — 기존 className 문자열을 그대로 조립해서 붙여주기만 함.
+ * 페이지 최상단 틀 컴포넌트 — styles/layout.css의 .pageWrap+.pageHeader+.pageTitle+.pageSubtitle과
+ * styles/admin.css의 .adminPageHeader를 variant prop으로 골라 쓰게 감싼 것. pageWrap 역할까지
+ * 겸하므로 children으로 나머지 페이지 내용을 넘겨받음. CSS 값은 안 바꾸고 className만 조립.
  */
 
 type PageHeaderVariant = "default" | "admin";

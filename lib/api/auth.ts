@@ -1,30 +1,8 @@
 import { apiFetch } from "./client";
 import type { LoginResult, ApiResult, UserDTO } from "../data/types";
 
-// ============================================================
-// POST /api/auth/login
-// 백엔드: UserController.java → login()
-// 기능: 로그인 — 성공하면 서버가 세션 쿠키를 내려줌 (credentials: "include" 로 브라우저가 자동 저장)
-//
-// 사용 예시:
-//   import { login } from "@/lib/api/auth";
-//
-//   const handleLogin = async () => {
-//     try {
-//       const result = await login(userId, pwd);
-//       setUserSession(result.user ?? null);   // useAuth() 의 setUserSession
-//     } catch (e: any) {
-//       setError(e.message);
-//     }
-//   };
-//
-// 요청 JSON (프론트 → 백엔드, body):
-//   { "userId": "test01", "pwd": "1234" }
-//
-// 응답 JSON (백엔드 → 프론트, 성공 시):
-//   { "success": true, "user": { "userId": "test01", "userNm": "홍길동", "roleId": 1 } }
-// 실패 시 (401) apiFetch 가 자동으로 Error를 던짐 → catch(e) { setError(e.message) }
-// ============================================================
+// POST /api/auth/login — UserController.login()
+// 로그인 성공 시 서버가 세션 쿠키를 내려줌(credentials: "include"로 브라우저가 자동 저장).
 export async function login(userId: string, pwd: string): Promise<LoginResult> {
   return apiFetch<LoginResult>("/auth/login", {
     method: "POST",
@@ -32,53 +10,18 @@ export async function login(userId: string, pwd: string): Promise<LoginResult> {
   });
 }
 
-// ============================================================
-// POST /api/auth/logout
-// 백엔드: UserController.java → logout()
-// 기능: 로그아웃 — 서버 세션 제거
-//
-// 사용 예시:
-//   await logout();
-//   setUserSession(null);   // useAuth() 의 setUserSession — 이걸 꼭 같이 해줘야 화면도 로그아웃 상태로 바뀜
-//
-// 요청: body 없음
-// 응답 JSON: { "success": true }
-// ============================================================
+// POST /api/auth/logout — UserController.logout()
 export async function logout(): Promise<ApiResult> {
   return apiFetch<ApiResult>("/auth/logout", { method: "POST" });
 }
 
-// ============================================================
-// GET /api/auth/check-id
-// 백엔드: UserController.java → checkUserId()
-// 기능: 회원가입 폼의 "중복확인" 버튼 — 이미 사용 중이면 apiFetch가 Error(A011)를 throw
-//
-// 응답 JSON: { "success": true, "message": "사용 가능한 아이디입니다." }
-// ============================================================
+// GET /api/auth/check-id — UserController.checkUserId()
+// 회원가입 폼 "중복확인" — 이미 사용 중이면 apiFetch가 Error(A011)를 throw.
 export async function checkUserId(userId: string): Promise<ApiResult> {
   return apiFetch<ApiResult>(`/auth/check-id?userId=${encodeURIComponent(userId)}`);
 }
 
-// ============================================================
-// POST /api/auth/signup
-// 백엔드: UserController.java → register()
-// 기능: 회원가입
-//
-// 사용 예시:
-//   try {
-//     await signup(userId, userNm, userEmail, pwd);
-//     router.push("/login");
-//   } catch (e: any) {
-//     setError(e.message);
-//   }
-//
-// 요청 JSON (프론트 → 백엔드, body):
-//   { "userId": "test01", "userNm": "홍길동", "userEmail": "a@a.com", "pwd": "1234" }
-//
-// 응답 JSON:
-//   성공: { "success": true, "message": "회원가입이 완료되었습니다." }
-//   실패: { "success": false, "message": "..." } → apiFetch 가 Error 로 throw
-// ============================================================
+// POST /api/auth/signup — UserController.register()
 export async function signup(
   userId: string,
   userNm: string,
@@ -91,14 +34,8 @@ export async function signup(
   });
 }
 
-// ============================================================
-// POST /api/auth/email/verification-codes
-// 백엔드: EmailVerificationController.java → send()
-// 기능: 이메일로 6자리 인증번호 발송(SQS 발행 → Lambda → SES), 5분 TTL
-//
-// 요청 JSON: { "email": "a@a.com" }
-// 응답 JSON: { "success": true, "message": "인증번호를 발송했습니다." }
-// ============================================================
+// POST /api/auth/email/verification-codes — EmailVerificationController.send()
+// 이메일로 6자리 인증번호 발송(SQS → Lambda → SES), 5분 TTL.
 export async function sendEmailVerificationCode(email: string): Promise<ApiResult> {
   return apiFetch<ApiResult>("/auth/email/verification-codes", {
     method: "POST",
@@ -106,14 +43,8 @@ export async function sendEmailVerificationCode(email: string): Promise<ApiResul
   });
 }
 
-// ============================================================
-// POST /api/auth/email/verification-codes/confirm
-// 백엔드: EmailVerificationController.java → confirm()
-// 기능: 인증번호 확인 — 통과하면 30분간 "인증완료" 상태(그 사이에 /auth/signup 호출해야 함)
-//
-// 요청 JSON: { "email": "a@a.com", "code": "123456" }
-// 응답 JSON: { "success": true, "message": "이메일 인증이 완료되었습니다." }
-// ============================================================
+// POST /api/auth/email/verification-codes/confirm — EmailVerificationController.confirm()
+// 통과하면 30분간 "인증완료" 상태(그 사이에 /auth/signup 호출해야 함).
 export async function confirmEmailVerificationCode(email: string, code: string): Promise<ApiResult> {
   return apiFetch<ApiResult>("/auth/email/verification-codes/confirm", {
     method: "POST",
@@ -121,21 +52,10 @@ export async function confirmEmailVerificationCode(email: string, code: string):
   });
 }
 
-// ============================================================
-// GET /api/auth/me
-// 백엔드: UserController.java → me()  (세션에 저장된 로그인 유저 정보를 그대로 돌려줌)
-// 기능: 현재 세션이 로그인 상태인지 확인 + 로그인 상태면 유저 정보 반환
-//
-// 응답 JSON:
-//   로그인 상태: { "success": true, "user": { "userId": "...", "userNm": "...", "roleId": 1 } }
-//   비로그인:   { "success": false, "message": "로그인이 필요합니다." }
-//   (참고: 백엔드가 이 경우도 200 OK 로 내려주기 때문에 아래 코드는 success 값만 보고 분기함)
-//
-// 주의: 이 함수는 AuthContext.tsx 안에서만 호출됨 — 다른 화면에서 로그인 유저 정보가 필요하면
-//       여기서 또 부르지 말고 useAuth() 훅으로 Context에 저장된 값을 가져다 쓸 것
-//       (여기서 또 부르면 Context가 들고 있는 세션값이랑 따로 노는 이중 상태가 생김)
-//   예시: const { userSession, isLoading } = useAuth();
-// ============================================================
+// GET /api/auth/me — UserController.me()
+// 현재 세션 로그인 여부 확인 + 유저 정보 반환. 비로그인도 200으로 내려와서 success 값만 보고 분기함.
+// 주의: AuthContext.tsx 안에서만 호출 — 다른 화면은 useAuth() 훅으로 Context 값을 가져다 쓸 것
+// (여기서 또 부르면 Context 세션값과 따로 노는 이중 상태가 생김).
 export async function getMe(): Promise<UserDTO | null> {
   try {
     const data = await apiFetch<{ success: boolean; user: UserDTO }>("/auth/me");
@@ -145,29 +65,8 @@ export async function getMe(): Promise<UserDTO | null> {
   }
 }
 
-// ============================================================
-// POST /api/auth/password/code
-// 백엔드: UserController.java → requestPasswordResetCode()
-// 기능: 비밀번호 찾기 1단계 — 아이디+이메일이 일치하는 계정에 비밀번호 재설정 링크를 이메일로 발송
-//       (SQS 발행 → notification-mailer Lambda가 type: PASSWORD_RESET으로 SES 발송)
-//
-// 사용 예시:
-//   import { requestPasswordResetCode } from "@/lib/api/auth";
-//
-//   try {
-//     await requestPasswordResetCode(userId, userEmail);
-//     setSent(true); // "이메일을 확인하세요" 안내 화면으로 전환
-//   } catch (e: any) {
-//     setError(e.message);
-//   }
-//
-// 요청 JSON (프론트 → 백엔드, body):
-//   { "userId": "test01", "userEmail": "a@a.com" }
-//
-// 응답 JSON:
-//   성공: { "success": true, "message": "비밀번호 재설정 링크를 이메일로 전송했습니다." }
-//   실패: apiFetch 가 Error 로 throw (아이디/이메일 불일치, 소셜 로그인 전용 계정 등)
-// ============================================================
+// POST /api/auth/password/code — UserController.requestPasswordResetCode()
+// 비밀번호 찾기 1단계 — 아이디+이메일 일치 계정에 재설정 링크 이메일 발송(SQS → Lambda → SES).
 export async function requestPasswordResetCode(userId: string, userEmail: string): Promise<ApiResult> {
   return apiFetch<ApiResult>("/auth/password/code", {
     method: "POST",
@@ -175,19 +74,9 @@ export async function requestPasswordResetCode(userId: string, userEmail: string
   });
 }
 
-// ============================================================
-// POST /api/auth/password/reset
-// 백엔드: UserController.java → resetPassword()
-// 기능: 비밀번호 찾기 2단계 — 이메일로 받은 링크의 토큰(?token=...) 확인 후 새 비밀번호로 변경
-//       (1회용 토큰, 15분 만료). 이 링크로 열리는 페이지는 app/(auth)/find-password/confirm/page.tsx
-//
-// 요청 JSON (프론트 → 백엔드, body):
-//   { "token": "xYz...(랜덤 토큰)", "newPwd": "새비밀번호" }
-//
-// 응답 JSON:
-//   성공: { "success": true, "message": "비밀번호가 재설정되었습니다." }
-//   실패: apiFetch 가 Error 로 throw (토큰 무효/만료 등)
-// ============================================================
+// POST /api/auth/password/reset — UserController.resetPassword()
+// 비밀번호 찾기 2단계 — 이메일 링크의 1회용 토큰(15분 만료) 확인 후 새 비밀번호로 변경.
+// 링크로 열리는 페이지: app/(auth)/find-password/confirm/page.tsx
 export async function resetPassword(token: string, newPwd: string): Promise<ApiResult> {
   return apiFetch<ApiResult>("/auth/password/reset", {
     method: "POST",

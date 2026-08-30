@@ -54,10 +54,8 @@ export default function SeatsPage() {
   // 벗어나는 것 → 슬롯을 더 붙잡고 있을 이유가 없어서 반납함.
   const proceedingRef = useRef(false);
 
-  // 응답에 AVAILABLE 좌석이 하나도 없으면 매진 — 더 이상 이 화면에서 할 게 없으므로 대기열 슬롯을
-  // 바로 반납함(QueueModal.tsx의 beforeunload 패턴과 같은 이유: 안 하면 ACTIVE_TTL(5분)이 다 될
-  // 때까지 자리를 붙잡고 있어서 다음 대기자가 못 들어옴 — 2026-08-24 실측으로 확인된 병목,
-  // CLAUDE_LLM_WIKI troubleshooting/backend-cold-start-cpu-contention-during-rollout 참고)
+  // 응답에 AVAILABLE 좌석이 하나도 없으면 매진 — 대기열 슬롯을 바로 반납함(QueueModal.tsx의
+  // beforeunload 패턴과 같은 이유: 안 하면 ACTIVE_TTL이 다 될 때까지 자리를 붙잡아 다음 대기자가 못 들어옴).
   const checkSoldOut = (list: Seat[]) => {
     if (list.length > 0 && list.every(s => s.status !== "AVAILABLE")) {
       setSoldOut(true);
@@ -75,11 +73,9 @@ export default function SeatsPage() {
   // 이게 없으면 토스트가 여러 번 뜨고 라우팅도 중복으로 걸린다.
   const expiredRef = useRef(false);
 
-  // 좌석을 한 번이라도 정상적으로 불러온 적이 있는지 — 안내 문구를 고르는 기준.
-  // 백엔드(SeatController)는 "토큰 없음 / 잘못된 토큰 / 만료" 세 경우 모두 똑같이 403을 주기 때문에
-  // 응답만으로는 구분할 수 없음. 대신 "처음부터 실패했는가"로 나누면 실질적으로 구분됨(2026-08-21):
-  //   처음부터 실패      → 대기열을 안 거치고 URL로 직접 들어온 경우
-  //   되다가 나중에 실패 → 좌석 고르는 사이 입장 자격이 만료된 경우
+  // 좌석을 한 번이라도 정상적으로 불러온 적이 있는지 — 안내 문구를 고르는 기준. 백엔드는
+  // "토큰 없음/잘못된 토큰/만료" 세 경우 모두 403으로 응답해서 구분이 안 되므로, 대신 "처음부터
+  // 실패했는가"(URL 직접 접근) vs "되다가 나중에 실패"(좌석 고르는 사이 자격 만료)로 구분함.
   const enteredOkRef = useRef(false);
 
   // 좌석 화면을 더 진행할 수 없을 때: 이유에 맞는 안내 후 원래 공연 상세로 돌려보냄.
@@ -184,12 +180,9 @@ export default function SeatsPage() {
     setSelected(prev => prev?.seatId === seat.seatId ? null : seat);
   };
 
-  // 예매하기 버튼 클릭 시: 좌석을 바로 예약 확정하지 않고, 결제 수단 선택 화면(/payments/checkout)으로
-  // 이동만 함 — 실제 예약 확정(RESERVATIONS UPDATE)은 결제 승인(PAY01_PAYMENT03) 이후에 이뤄짐.
-  //
-  // 팀 논의 결과: 좌석 선택 단계에서 선점(hold)으로 미리 막지 않고, 결제 화면까지는 여러 명이
-  // 동시에 들어갈 수 있게 두기로 함 — 최종적으로 먼저 결제를 완료한 사람만 좌석을 가져가고,
-  // 늦은 사람은 confirm 시점의 락(ReservationServiceImpl.reserve)에서 걸러져 결제가 자동 취소(환불)됨.
+  // 예매하기 클릭 시 좌석을 바로 확정하지 않고 결제 화면으로만 이동 — 실제 확정은 결제 승인 이후.
+  // 좌석 선점(hold) 없이 결제 화면까지는 여러 명이 동시에 들어갈 수 있고, 먼저 결제 완료한
+  // 사람만 좌석을 가져가며 늦은 사람은 confirm 시점 락에서 걸러져 자동 취소(환불)됨.
   const handleReserve = () => {
     if (!selected) return;
 
